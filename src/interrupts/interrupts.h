@@ -1,0 +1,8 @@
+//
+// Created by Sami on 17.9.2026.
+//
+
+#ifndef IOT_OOP_GARAGE_DOOR_INTERRUPTS_H
+#define IOT_OOP_GARAGE_DOOR_INTERRUPTS_H
+
+#endif //IOT_OOP_GARAGE_DOOR_INTERRUPTS_H
