@@ -7,6 +7,7 @@
 extern queue_t sw0EventQ;
 extern queue_t sw1EventQ;
 extern queue_t sw2EventQ;
+extern queue_t lmswEventQ;
 
 /* EVENT FUNCTIONS / CLASSES */
 void commonIsr(uint gpio, uint32_t eventMask);

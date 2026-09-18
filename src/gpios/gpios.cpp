@@ -79,24 +79,64 @@ void CommonGPIO::write(const bool value) const
     gpio_put(this->pin, value);
 }
 
+int CommonGPIO::getPin()
+{
+    if (this->is_dormant)
+    {
+        return -1;
+    }
+    return this->pin;
+}
 
-/* SWITCHES CLASS */
+
+
+// SWITCH HUB
 Switches::Switches(int sw0Pin, int sw1Pin, int sw2Pin, bool input, bool pullup, bool inverted) :
-sw0(sw0Pin, input, pullup, inverted),
-sw1(sw1Pin, input, pullup, inverted),
-sw2(sw2Pin, input, pullup, inverted)
+switches
+{
+    CommonGPIO(sw0Pin, input, pullup, inverted),
+    CommonGPIO(sw1Pin, input, pullup, inverted),
+    CommonGPIO(sw2Pin, input, pullup, inverted),
+}
 {}
 
 void Switches::firstInitInterrupts()
 {
-    gpio_set_irq_enabled_with_callback(this->sw0.pin, GPIO_IRQ_EDGE_FALL, true, &commonIsr);
-    gpio_set_irq_enabled_with_callback(this->sw1.pin, GPIO_IRQ_EDGE_FALL, true, &commonIsr);
-    gpio_set_irq_enabled_with_callback(this->sw2.pin, GPIO_IRQ_EDGE_FALL, true, &commonIsr);
+    for (auto &pin : this->switches)
+    {
+        const int pinNum = pin.getPin();
+        gpio_set_irq_enabled_with_callback(pinNum, GPIO_IRQ_EDGE_FALL, true, &commonIsr);
+    }
 }
 
 void Switches::setInterrupt(const int gpio, const bool interruptStatus)
 {
     gpio_set_irq_enabled(gpio, GPIO_IRQ_EDGE_FALL, interruptStatus);
+}
+
+
+
+// LIMIT SWITCH HUB
+LimitSwitches::LimitSwitches(const int lmswPin1, const int lmswPin2, const bool inverted) :
+limitSwitches
+{
+    CommonGPIO(lmswPin1, true, true, inverted),
+    CommonGPIO(lmswPin2, true, true, inverted)
+}
+{}
+
+void LimitSwitches::firstInitInterrupts()
+{
+    for (auto &pin : this->limitSwitches)
+    {
+        const int pinNum = pin.getPin();
+        gpio_set_irq_enabled_with_callback(pinNum, GPIO_IRQ_EDGE_RISE, true, &commonIsr);
+    }
+}
+
+void LimitSwitches::setInterrupt(const int gpio, const bool interruptStatus)
+{
+    gpio_set_irq_enabled(gpio, GPIO_IRQ_EDGE_RISE, interruptStatus);
 }
 
 

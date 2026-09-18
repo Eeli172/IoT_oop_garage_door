@@ -1,6 +1,7 @@
 #ifndef IOT_OOP_GARAGE_DOOR_MOTOR_RUN_H
 #define IOT_OOP_GARAGE_DOOR_MOTOR_RUN_H
 #include "../gpios/gpios.h"
+#include <vector>
 
 class Motor
 {
@@ -10,11 +11,11 @@ class Motor
     ~Motor() = default;
 
     void runMotor();
-    void calibrateMotor();
-    void initializeInterrupts();
+    void calibrateMotor() const;
 
     private:
     std::vector<std::unique_ptr<CommonGPIO>> motorCoils;
+    int stepsToEnd;
     int runInstructionsMatrix[8][4];
 };
 

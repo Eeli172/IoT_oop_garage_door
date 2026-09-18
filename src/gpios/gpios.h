@@ -1,8 +1,9 @@
 #ifndef IOT_OOP_GARAGE_DOOR_GPIOS_H
 #define IOT_OOP_GARAGE_DOOR_GPIOS_H
 
-#include <vector>
+#include <array>
 #include <memory>
+#include "../macros/macros.h"
 
 class CommonGPIO {
 public:
@@ -12,8 +13,10 @@ public:
 
     void write(bool value) const;
     bool read() const;
+    int getPin();
     explicit operator bool() const;
 
+private:
     static uint32_t pins_in_use;
     int pin;
     bool input;
@@ -21,7 +24,7 @@ public:
 };
 
 
-
+// ABSTRACT CLASS 'HUB'
 class GPIOHub
 {
 public:
@@ -31,25 +34,37 @@ public:
 };
 
 
-
+// SWITCH HUB (SW0, SW1, SW2)
 class Switches : public GPIOHub
 {
-public:
+    public:
     Switches(int sw0Pin, int sw1Pin, int sw2Pin, bool input, bool pullup, bool inverted);
     Switches(const Switches &) = delete;
     ~Switches() override = default;
+
     void setInterrupt(int gpio, bool interruptStatus) override;
     void firstInitInterrupts() override;
+    void setQueueInput(const bool &value);
 
-private:
-    CommonGPIO sw0;
-    CommonGPIO sw1;
-    CommonGPIO sw2;
+    private:
+    std::array<CommonGPIO, TOTAL_SWITCHES> switches;
 };
 
+
+
+// LIMIT SWITCH HUB (LMSW_1 & LMSW_2)
 class LimitSwitches : public GPIOHub
 {
     public:
+    LimitSwitches(int lmswPin1, int lmswPin2, bool inverted);
+    LimitSwitches(const LimitSwitches &) = delete;
+    ~LimitSwitches() override = default;
+
+    void setInterrupt(int gpio, bool interruptStatus) override;
+    void firstInitInterrupts() override;
+
+    private:
+    std::array<CommonGPIO, TOTAL_LIMIT_SWITCHES> limitSwitches;
 };
 
 

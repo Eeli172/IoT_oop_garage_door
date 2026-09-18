@@ -21,6 +21,7 @@ typedef struct System
     stateMachine currentState;
     bool isCalibrated;
     uint encoderPos;
+    bool queueInput;
 
 } systemBank;
 
@@ -30,7 +31,8 @@ int main() {
     const systemBank systemBank {
         .currentState = PRE_CALIB,
         .isCalibrated = false,
-        .encoderPos = 0
+        .encoderPos = 0,
+        .queueInput = false
     };
 
     initQueues();
@@ -38,15 +40,19 @@ int main() {
     SwitchManager.firstInitInterrupts();
     SwitchManager.setInterrupt(SW1, false);
 
+    bool queueInput;
+
     while (true)
     {
         switch (systemBank.currentState)
         {
             case PRE_CALIB:
-                while (!queue_is_empty(&sw0EventQ) && !queue_is_empty(&sw2EventQ))
+                while (queue_try_remove(&sw0EventQ, &queueInput) && queue_try_remove(&sw2EventQ, &queueInput))
                 {
                     std::cout << "C++ haisee paskalta" << std::endl;
                 }// SW0 ja SW2 pohjassa --> siirtyy CALIB
+
+                sleep_ms(500);
             break;
 
             case CALIB:
