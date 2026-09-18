@@ -1,8 +1,14 @@
-//
-// Created by Sami on 17.9.2026.
-//
-
 #ifndef IOT_OOP_GARAGE_DOOR_INTERRUPTS_H
 #define IOT_OOP_GARAGE_DOOR_INTERRUPTS_H
+
+#include "pico/util/queue.h"
+
+/* EVENT QUEUES */
+extern queue_t sw0EventQ;
+extern queue_t sw1EventQ;
+extern queue_t sw2EventQ;
+
+/* EVENT FUNCTIONS / CLASSES */
+void commonIsr(uint gpio, uint32_t eventMask);
 
 #endif //IOT_OOP_GARAGE_DOOR_INTERRUPTS_H
