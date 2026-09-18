@@ -1,14 +1,14 @@
 /* HEADERS */
 // STL
 #include <iostream>
-
+#include "pico/types.h"
 // CUSTOM
 #include "gpios/gpios.h"
 #include "interrupts/interrupts.h"
 #include "motor_run/motor_run.h"
-#include "motor_run/calibration/calibration.h"
 #include "mqtt/mqtt.h"
-#include "pico/types.h"
+#include "macros/macros.h"
+#include "pico/stdio.h"
 
 
 /* SYSTEM */
@@ -25,26 +25,35 @@ typedef struct System
 } systemBank;
 
 int main() {
-    constexpr systemBank systemBank {
+    stdio_init_all();
+
+    const systemBank systemBank {
         .currentState = PRE_CALIB,
         .isCalibrated = false,
         .encoderPos = 0
     };
+
+    initQueues();
+    Switches SwitchManager(SW0, SW1, SW2, true, true, true);
+    SwitchManager.firstInitInterrupts();
+    SwitchManager.setInterrupt(SW1, false);
 
     while (true)
     {
         switch (systemBank.currentState)
         {
             case PRE_CALIB:
-                while () // SW0 ja SW2 pohjassa --> siirtyy CALIB
-
+                while (!queue_is_empty(&sw0EventQ) && !queue_is_empty(&sw2EventQ))
+                {
+                    std::cout << "C++ haisee paskalta" << std::endl;
+                }// SW0 ja SW2 pohjassa --> siirtyy CALIB
             break;
 
             case CALIB:
             break;
 
             case PRE_RUN:
-                while () // SW1 kontrollinappi --> eri toimintoja
+                while (true){} // SW1 kontrollinappi --> eri toimintoja
             break;
 
             case RUN:

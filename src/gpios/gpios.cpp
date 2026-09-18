@@ -3,7 +3,10 @@
 #include "gpios.h"
 #include <memory>
 
-CommonGPIO::CommonGPIO(const int pin, const bool input, const bool pullup, const bool inverted) :
+#include "../interrupts/interrupts.h"
+#include "../macros/macros.h"
+
+CommonGPIO::CommonGPIO(const int pin, const bool input = true, const bool pullup = true, const bool inverted = false) :
 pin(pin), input(input), is_dormant(true)
 {
     gpio_init(pin);
@@ -35,6 +38,8 @@ pin(pin), input(input), is_dormant(true)
         }
     }
 }
+
+uint32_t CommonGPIO::pins_in_use = 0;
 
 CommonGPIO::~CommonGPIO()
 {
@@ -75,6 +80,24 @@ void CommonGPIO::write(const bool value) const
 }
 
 
+/* SWITCHES CLASS */
+Switches::Switches(int sw0Pin, int sw1Pin, int sw2Pin, bool input, bool pullup, bool inverted) :
+sw0(sw0Pin, input, pullup, inverted),
+sw1(sw1Pin, input, pullup, inverted),
+sw2(sw2Pin, input, pullup, inverted)
+{}
+
+void Switches::firstInitInterrupts()
+{
+    gpio_set_irq_enabled_with_callback(this->sw0.pin, GPIO_IRQ_EDGE_FALL, true, &commonIsr);
+    gpio_set_irq_enabled_with_callback(this->sw1.pin, GPIO_IRQ_EDGE_FALL, true, &commonIsr);
+    gpio_set_irq_enabled_with_callback(this->sw2.pin, GPIO_IRQ_EDGE_FALL, true, &commonIsr);
+}
+
+void Switches::setInterrupt(const int gpio, const bool interruptStatus)
+{
+    gpio_set_irq_enabled(gpio, GPIO_IRQ_EDGE_FALL, interruptStatus);
+}
 
 
 
