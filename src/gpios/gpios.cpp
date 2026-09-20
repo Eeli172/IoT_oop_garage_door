@@ -2,6 +2,7 @@
 #include "gpios.h"
 #include <memory>
 #include <array>
+#include <iostream>
 
 #include "../interrupts/interrupts.h"
 #include "../macros/macros.h"
@@ -92,38 +93,69 @@ int CommonGPIO::getPin()
 
 
 
-// SWITCH HUB
-Switches::Switches(std::vector<int> pins, bool input, bool pullup, bool inverted) {
-    for (auto pin : pins) {
+// SWITCHES
+Switches::Switches(const std::vector<int> &pins, bool input, bool pullup, bool inverted) {
+    for (const auto &pin : pins) {
         switches.push_back(std::make_unique<CommonGPIO>(pin, input, pullup, inverted));
     }
 }
 
-void Switches::firstInitInterrupts()
+// Vector first value corresponds to SW0, second to SW1 and so on...
+void Switches::firstInitInterrupts(const std::vector<bool> &switchStates) const
 {
-    for (auto &sw : this->switches)
+    for (std::size_t i = 0; i < switchStates.size(); i++)
     {
-        const int pinNum = sw->getPin();
-        gpio_set_irq_enabled_with_callback(pinNum, GPIO_IRQ_EDGE_FALL, true, &commonIsr);
+        const auto &swPin = this->switches[i]->getPin();
+        gpio_set_irq_enabled_with_callback(swPin, GPIO_IRQ_EDGE_FALL, switchStates[i], &commonIsr);
+    }
+}
+
+// Allows toggling of multiple interrupts of multiple gpios at a time
+void Switches::modifyInterrupts(const std::vector<int> &swPins, const std::vector<bool> &interruptStates) const
+{
+    if (swPins.size() != interruptStates.size())
+    {
+        std::cerr << "Parameter vectors not equal [swPins.size() != interruptStates.size()]" << std::endl;
+        return;
+    }
+
+    if (swPins.size() > MAX_SWITCHES_CLASS)
+    {
+        std::cerr << "System does not support over ["<< MAX_SWITCHES_CLASS <<"] per class." << std::endl;
+        return;
+    }
+
+    for (std::size_t i = 0; i < swPins.size(); i++)
+    {
+        for (const auto &swGpio: this->switches)
+        {
+            if (swGpio->getPin() == swPins[i])
+            {
+                gpio_set_irq_enabled(swPins[i], GPIO_IRQ_EDGE_FALL, interruptStates[i]);
+            }
+        }
     }
 }
 
 
 
-
-// LEDS
-StatusLeds::StatusLeds(std::array<int, TOTAL_LEDS>& ledGpios, bool inverted)
+// SYSTEM STATUS LEDS
+StatusLeds::StatusLeds(const std::vector<int> &ledGpios, bool inverted)
 {
-
+    for (const auto &ledGpio: ledGpios)
+    {
+        this->ledGpios.push_back(std::make_unique<CommonGPIO>(ledGpio, inverted));
+    }
 }
 
-void StatusLeds::writeLed (const bool &ledState, const int ledGpio) const
+// Function to toggle led ON/OFF
+void StatusLeds::writeLed (const int ledGpio) const
 {
     for (const auto &pin : this->ledGpios)
     {
         if (pin->getPin() == ledGpio)
         {
-            pin->write(ledState);
+            pin->write(!pin->read());
             break;
         }
     }

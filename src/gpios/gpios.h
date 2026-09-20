@@ -30,11 +30,12 @@ private:
 // SWITCH HUB (SW0, SW1, SW2)
 class Switches {
 public:
-    Switches(std::vector<int> pins, bool input, bool pullup, bool inverted);
+    Switches(const std::vector<int> &pins, bool input, bool pullup, bool inverted);
     Switches(const Switches &) = delete;
     ~Switches() = default;
 
-    void firstInitInterrupts();
+    void firstInitInterrupts(const std::vector<bool> &switchStates) const;
+    void modifyInterrupts(const std::vector<int> &swPins, const std::vector<bool> &interruptStates) const;
 
 private:
     std::vector<std::unique_ptr<CommonGPIO>> switches;
@@ -45,14 +46,14 @@ private:
 class StatusLeds
 {
 public:
-    StatusLeds(std::array<int, TOTAL_LEDS> &ledGpios, bool inverted);
+    StatusLeds(const std::vector<int> &ledGpios, bool inverted);
     StatusLeds(const StatusLeds &) = delete;
     ~StatusLeds() = default;
 
-    void writeLed (const bool &ledState, int ledGpio) const;
+    void writeLed (int ledGpio) const;
 
 private:
-    std::array<std::unique_ptr<CommonGPIO>, TOTAL_LEDS> ledGpios;
+    std::vector<std::unique_ptr<CommonGPIO>> ledGpios;
 };
 
 

@@ -2,6 +2,8 @@
 #include "../macros/macros.h"
 #include <iostream>
 
+#include "hardware/gpio.h"
+
 /* ISR QUEUES */
 queue_t sw0EventQ;
 queue_t sw1EventQ;
@@ -41,4 +43,5 @@ void initQueues()
     queue_init(&sw0EventQ, sizeof(bool), 10);
     queue_init(&sw1EventQ, sizeof(bool), 10);
     queue_init(&sw2EventQ, sizeof(bool), 10);
+    queue_init(&lmswEventQ, sizeof(bool), 10);
 }

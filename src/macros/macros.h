@@ -6,12 +6,11 @@
 #define SW0 9
 #define SW1 8
 #define SW2 7
-#define TOTAL_SWITCHES 3
+#define MAX_SWITCHES_CLASS 3
 
 // LIMIT SWITCHES (GARAGE DOOR)
 #define LMSW_1 16
 #define LMSW_2 17
-#define TOTAL_LIMIT_SWITCHES 2
 
 // MOTOR COIL GPIOS
 #define COIL_1 2

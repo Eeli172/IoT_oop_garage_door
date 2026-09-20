@@ -2,7 +2,6 @@
 #define IOT_OOP_GARAGE_DOOR_MOTOR_RUN_H
 #include <memory>
 #include <vector>
-#include <array>
 
 #include "../gpios/gpios.h"
 
@@ -10,7 +9,7 @@
 class Motor
 {
     public:
-    Motor(const std::array<int, TOTAL_COILS> &coilGpios, bool inverted);
+    Motor(const std::vector<int> &coilGpios, bool inverted);
     Motor(const Motor &) = delete; // Copy-constructors denied.
     ~Motor() = default;
 

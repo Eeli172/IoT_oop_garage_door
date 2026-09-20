@@ -2,7 +2,7 @@
 // STL
 #include <iostream>
 #include <ostream>
-#include "array"
+#include <array>
 
 // CUSTOM
 
@@ -12,6 +12,7 @@
 #include "motor_run/motor_run.h"
 #include "macros/macros.h"
 #include "pico/stdio.h"
+#include "pico/stdio/driver.h"
 
 
 /* SYSTEM */
@@ -25,26 +26,31 @@ typedef struct System
     bool isCalibrated;
     uint encoderPos;
     std::unique_ptr<Motor> stepperMotor;
+    std::unique_ptr<Switches> userButtons;
+    std::unique_ptr<Switches> limitSwitches;
 
 } systemBank;
 
 int main() {
     stdio_init_all();
-    std::cout << "Boot1" << std::endl;
-    
+    sleep_ms(2000);
+
     System sB {
         .currentState = PRE_CALIB,
         .isCalibrated = false,
         .encoderPos = 0,
-        .stepperMotor = std::make_unique<Motor>(std::array {COIL_1, COIL_2, COIL_3, COIL_4}, false)
+        .stepperMotor = std::make_unique<Motor>(std::vector {COIL_1, COIL_2, COIL_3, COIL_4}, false),
+        .userButtons = std::make_unique<Switches>(std::vector {SW0, SW1, SW2}, true, true, true),
+        .limitSwitches = std::make_unique<Switches>(std::vector {LMSW_1, LMSW_2}, true, true, true),
     };
     
     initQueues();
-    Switches SwitchManager({SW0, SW1, SW2}, true, true, true);
-    SwitchManager.firstInitInterrupts();
+    sB.userButtons->firstInitInterrupts({true, false, true});
     
     bool queueInput;
-    
+
+    std::cout << "Boot1" << std::endl;
+
     while (true)
     {
         switch (sB.currentState)
@@ -52,27 +58,26 @@ int main() {
             case PRE_CALIB:
             while (queue_try_remove(&sw0EventQ, &queueInput) && queue_try_remove(&sw2EventQ, &queueInput))
             {
-                std::cout << "Calibration start: " << std::endl;
                 sB.currentState = CALIB;
             }
             break;
             
             case CALIB:
                 // [1] Calling class function calibrateMotor
+                sB.limitSwitches->firstInitInterrupts({true, true});
+                std::cout << "Calibration start: " << std::endl;
                 sB.stepperMotor->calibrateMotor();
                 sB.currentState = PRE_RUN;
             break;
 
             case PRE_RUN:
                 std::cout << "Run start: " << std::endl;
+
                 // SW1 kontrollinappi --> eri toimintoja
             break;
 
             case RUN:
             break;
         }
-        sleep_ms(10);
     }
-
-    return 0;
 }
