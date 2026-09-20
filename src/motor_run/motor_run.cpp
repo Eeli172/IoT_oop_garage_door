@@ -6,7 +6,7 @@
 #include "pico/util/queue.h"
 #include "hardware/gpio.h"
 
-Motor::Motor(const std::vector<int> &coilGpios, bool inverted) :
+Motor::Motor(const std::array<int, TOTAL_COILS> &coilGpios, bool inverted) :
 stepsToEnd(0),
 runInstructionsMatrix {
     {1, 0, 0, 0},

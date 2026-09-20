@@ -48,7 +48,7 @@ CommonGPIO::~CommonGPIO()
         gpio_set_outover(this->pin, GPIO_OVERRIDE_NORMAL);
         gpio_set_inover(this->pin, GPIO_OVERRIDE_NORMAL);
         gpio_disable_pulls(this->pin);
-
+§
         // Release the pin lock
         pins_in_use &= ~(1U << this->pin);
     }
@@ -130,13 +130,13 @@ void LimitSwitches::firstInitInterrupts()
     for (auto &pin : this->limitSwitches)
     {
         const int pinNum = pin.getPin();
-        gpio_set_irq_enabled_with_callback(pinNum, GPIO_IRQ_EDGE_RISE, true, &commonIsr);
+        gpio_set_irq_enabled_with_callback(pinNum, GPIO_IRQ_EDGE_FALL, true, &commonIsr);
     }
 }
 
 void LimitSwitches::setInterrupt(const int gpio, const bool interruptStatus)
 {
-    gpio_set_irq_enabled(gpio, GPIO_IRQ_EDGE_RISE, interruptStatus);
+    gpio_set_irq_enabled(gpio, GPIO_IRQ_EDGE_FALL, interruptStatus);
 }
 
 

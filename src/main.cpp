@@ -1,8 +1,12 @@
 /* HEADERS */
 // STL
 #include <iostream>
+#include <initializer_list>
 #include "pico/types.h"
+#include "array"
+
 // CUSTOM
+
 #include "gpios/gpios.h"
 #include "interrupts/interrupts.h"
 #include "motor_run/motor_run.h"
@@ -22,17 +26,19 @@ typedef struct System
     bool isCalibrated;
     uint encoderPos;
     bool queueInput;
+    std::unique_ptr<Motor> stepperMotor;
 
 } systemBank;
 
 int main() {
     stdio_init_all();
 
-    const systemBank systemBank {
+    systemBank sB {
         .currentState = PRE_CALIB,
         .isCalibrated = false,
         .encoderPos = 0,
-        .queueInput = false
+        .queueInput = false,
+        .stepperMotor = nullptr
     };
 
     initQueues();
@@ -44,27 +50,30 @@ int main() {
 
     while (true)
     {
-        switch (systemBank.currentState)
+        switch (sB.currentState)
         {
             case PRE_CALIB:
                 while (queue_try_remove(&sw0EventQ, &queueInput) && queue_try_remove(&sw2EventQ, &queueInput))
                 {
-                    std::cout << "C++ haisee paskalta" << std::endl;
-                }// SW0 ja SW2 pohjassa --> siirtyy CALIB
-
-                sleep_ms(500);
+                    std::cout << "Calibration start: " << std::endl;
+                    sB.currentState = CALIB;
+                }
             break;
 
-            case CALIB:
+        case CALIB:
+                Motor stepperMotor ({COIL_1, COIL_2, COIL_3, COIL_4}, false);
+                sB.currentState = PRE_RUN;
             break;
 
             case PRE_RUN:
-                while (true){} // SW1 kontrollinappi --> eri toimintoja
+                std::cout << "Run start: " << std::endl;
+                // SW1 kontrollinappi --> eri toimintoja
             break;
 
             case RUN:
             break;
         }
+        sleep_ms(10);
     }
 
     return 0;

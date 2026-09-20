@@ -6,7 +6,7 @@
 class Motor
 {
     public:
-    Motor(const std::vector<int> &coilGpios, bool inverted);
+    Motor(const std::array<int, TOTAL_COILS> &coilGpios, bool inverted);
     Motor(const Motor &) = delete; // Copy-constructors denied.
     ~Motor() = default;
 
