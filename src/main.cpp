@@ -1,7 +1,6 @@
 /* HEADERS */
 // STL
 #include <iostream>
-#include <initializer_list>
 #include "pico/types.h"
 #include "array"
 
@@ -25,7 +24,6 @@ typedef struct System
     stateMachine currentState;
     bool isCalibrated;
     uint encoderPos;
-    bool queueInput;
     std::unique_ptr<Motor> stepperMotor;
 
 } systemBank;
@@ -33,12 +31,11 @@ typedef struct System
 int main() {
     stdio_init_all();
 
-    systemBank sB {
+    System sB {
         .currentState = PRE_CALIB,
         .isCalibrated = false,
         .encoderPos = 0,
-        .queueInput = false,
-        .stepperMotor = nullptr
+        .stepperMotor = std::make_unique<Motor>(std::array {COIL_1, COIL_2, COIL_3, COIL_4}, false)
     };
 
     initQueues();
@@ -60,8 +57,9 @@ int main() {
                 }
             break;
 
-        case CALIB:
-                Motor stepperMotor ({COIL_1, COIL_2, COIL_3, COIL_4}, false);
+            case CALIB:
+                // [1] Calling class function calibrateMotor
+                sB.stepperMotor->calibrateMotor();
                 sB.currentState = PRE_RUN;
             break;
 

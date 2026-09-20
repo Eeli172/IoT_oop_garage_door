@@ -27,7 +27,6 @@ add_executable(${PROJECT_NAME}
         src/interrupts/interrupts.cpp
         src/gpios/gpios.cpp
         src/motor_run/motor_run.cpp
-        src/motor_run/calibration/calibration.cpp
         src/mqtt/mqtt.cpp
 )
 

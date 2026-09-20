@@ -48,7 +48,7 @@ CommonGPIO::~CommonGPIO()
         gpio_set_outover(this->pin, GPIO_OVERRIDE_NORMAL);
         gpio_set_inover(this->pin, GPIO_OVERRIDE_NORMAL);
         gpio_disable_pulls(this->pin);
-§
+
         // Release the pin lock
         pins_in_use &= ~(1U << this->pin);
     }
@@ -137,6 +137,39 @@ void LimitSwitches::firstInitInterrupts()
 void LimitSwitches::setInterrupt(const int gpio, const bool interruptStatus)
 {
     gpio_set_irq_enabled(gpio, GPIO_IRQ_EDGE_FALL, interruptStatus);
+}
+
+
+
+// LEDS
+class StatusLeds
+{
+public:
+    StatusLeds(std::array<int, TOTAL_LEDS> &ledGpios, bool inverted);
+    StatusLeds(const StatusLeds &) = delete;
+    ~StatusLeds() = default;
+
+    void writeLed (const bool &ledState, uint ledGpio) const;
+
+private:
+    std::array<std::unique_ptr<CommonGPIO>, TOTAL_LEDS> ledGpios;
+};
+
+StatusLeds::StatusLeds(std::array<int, TOTAL_LEDS>& ledGpios, bool inverted)
+{
+
+}
+
+void StatusLeds::writeLed (const bool &ledState, const uint ledGpio) const
+{
+    for (const auto &pin : this->ledGpios)
+    {
+        if (pin->getPin() == ledGpio)
+        {
+            pin->write(ledState);
+            break;
+        }
+    }
 }
 
 

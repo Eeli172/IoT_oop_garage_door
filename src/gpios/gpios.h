@@ -2,6 +2,7 @@
 #define IOT_OOP_GARAGE_DOOR_GPIOS_H
 
 #include <array>
+#include <vector>
 #include <memory>
 #include "../macros/macros.h"
 
@@ -44,7 +45,6 @@ class Switches : public GPIOHub
 
     void setInterrupt(int gpio, bool interruptStatus) override;
     void firstInitInterrupts() override;
-    void setQueueInput(const bool &value);
 
     private:
     std::array<CommonGPIO, TOTAL_SWITCHES> switches;
@@ -66,6 +66,11 @@ class LimitSwitches : public GPIOHub
     private:
     std::array<CommonGPIO, TOTAL_LIMIT_SWITCHES> limitSwitches;
 };
+
+
+
+// LED HUB (GPIO: 20, 21, 22)
+
 
 
 #endif //IOT_OOP_GARAGE_DOOR_GPIOS_H
