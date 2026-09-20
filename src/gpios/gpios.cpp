@@ -1,10 +1,12 @@
-#include <iostream>
-#include "pico/stdlib.h"
+#include "pico/stdlib.h" // IWYU pragma: keep
 #include "gpios.h"
 #include <memory>
+#include <array>
 
 #include "../interrupts/interrupts.h"
 #include "../macros/macros.h"
+
+
 
 CommonGPIO::CommonGPIO(const int pin, const bool input = true, const bool pullup = true, const bool inverted = false) :
 pin(pin), input(input), is_dormant(true)
@@ -91,76 +93,31 @@ int CommonGPIO::getPin()
 
 
 // SWITCH HUB
-Switches::Switches(int sw0Pin, int sw1Pin, int sw2Pin, bool input, bool pullup, bool inverted) :
-switches
-{
-    CommonGPIO(sw0Pin, input, pullup, inverted),
-    CommonGPIO(sw1Pin, input, pullup, inverted),
-    CommonGPIO(sw2Pin, input, pullup, inverted),
+Switches::Switches(std::vector<int> pins, bool input, bool pullup, bool inverted) {
+    for (auto pin : pins) {
+        switches.push_back(std::make_unique<CommonGPIO>(pin, input, pullup, inverted));
+    }
 }
-{}
 
 void Switches::firstInitInterrupts()
 {
-    for (auto &pin : this->switches)
+    for (auto &sw : this->switches)
     {
-        const int pinNum = pin.getPin();
+        const int pinNum = sw->getPin();
         gpio_set_irq_enabled_with_callback(pinNum, GPIO_IRQ_EDGE_FALL, true, &commonIsr);
     }
 }
 
-void Switches::setInterrupt(const int gpio, const bool interruptStatus)
-{
-    gpio_set_irq_enabled(gpio, GPIO_IRQ_EDGE_FALL, interruptStatus);
-}
-
-
-
-// LIMIT SWITCH HUB
-LimitSwitches::LimitSwitches(const int lmswPin1, const int lmswPin2, const bool inverted) :
-limitSwitches
-{
-    CommonGPIO(lmswPin1, true, true, inverted),
-    CommonGPIO(lmswPin2, true, true, inverted)
-}
-{}
-
-void LimitSwitches::firstInitInterrupts()
-{
-    for (auto &pin : this->limitSwitches)
-    {
-        const int pinNum = pin.getPin();
-        gpio_set_irq_enabled_with_callback(pinNum, GPIO_IRQ_EDGE_FALL, true, &commonIsr);
-    }
-}
-
-void LimitSwitches::setInterrupt(const int gpio, const bool interruptStatus)
-{
-    gpio_set_irq_enabled(gpio, GPIO_IRQ_EDGE_FALL, interruptStatus);
-}
 
 
 
 // LEDS
-class StatusLeds
-{
-public:
-    StatusLeds(std::array<int, TOTAL_LEDS> &ledGpios, bool inverted);
-    StatusLeds(const StatusLeds &) = delete;
-    ~StatusLeds() = default;
-
-    void writeLed (const bool &ledState, uint ledGpio) const;
-
-private:
-    std::array<std::unique_ptr<CommonGPIO>, TOTAL_LEDS> ledGpios;
-};
-
 StatusLeds::StatusLeds(std::array<int, TOTAL_LEDS>& ledGpios, bool inverted)
 {
 
 }
 
-void StatusLeds::writeLed (const bool &ledState, const uint ledGpio) const
+void StatusLeds::writeLed (const bool &ledState, const int ledGpio) const
 {
     for (const auto &pin : this->ledGpios)
     {

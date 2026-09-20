@@ -1,9 +1,10 @@
 #ifndef IOT_OOP_GARAGE_DOOR_MOTOR_RUN_H
 #define IOT_OOP_GARAGE_DOOR_MOTOR_RUN_H
 #include <memory>
+#include <vector>
+#include <array>
 
 #include "../gpios/gpios.h"
-#include <vector>
 
 
 class Motor
