@@ -11,6 +11,7 @@ include($ENV{PICO_SDK_PATH}/external/pico_sdk_import.cmake)
 project(Garage_Door C CXX ASM)
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 # Creates a pico-sdk subdirectory in our project for the libraries
 pico_sdk_init()
@@ -36,6 +37,7 @@ pico_add_extra_outputs(${PROJECT_NAME})
 # Link to pico_stdlib (gpio, time, etc. functions)
 target_link_libraries(${PROJECT_NAME} 
         pico_stdlib
+        pico_util
         hardware_pwm
         hardware_gpio
         hardware_uart

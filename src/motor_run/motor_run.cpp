@@ -1,5 +1,4 @@
 #include "motor_run.h"
-#include <iostream>
 #include <memory>
 
 #include "../interrupts/interrupts.h"
@@ -37,7 +36,7 @@ void Motor::calibrateMotor() const
         {
             for (int i = 0; i < 8; i++)
             {
-                for (int j = 0; j < this->motorCoils.size(); j++)
+                for (size_t j = 0; j < this->motorCoils.size(); j++)
                 {
                     gpio_put(this->motorCoils[j]->getPin(), this->runInstructionsMatrix[i][j]);
                 }

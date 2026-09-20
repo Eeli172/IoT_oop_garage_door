@@ -2,8 +2,7 @@
 #define IOT_OOP_GARAGE_DOOR_GPIOS_H
 
 #include <array>
-#include <vector>
-#include <memory>
+#include <cstdint>
 #include "../macros/macros.h"
 
 class CommonGPIO {

@@ -9,7 +9,6 @@
 #include "gpios/gpios.h"
 #include "interrupts/interrupts.h"
 #include "motor_run/motor_run.h"
-#include "mqtt/mqtt.h"
 #include "macros/macros.h"
 #include "pico/stdio.h"
 
