@@ -2,11 +2,10 @@
 #define IOT_OOP_GARAGE_DOOR_MOTOR_RUN_H
 #include <memory>
 #include <vector>
-#include <any>
 
 #include "../gpios/gpios.h"
 
-typedef enum { CLOSING, OPENING, CLOSED, OPEN } doorDirection_t;
+typedef enum { CLOSING, OPENING, CLOSED, OPEN } doorState_t;
 
 class Motor
 {
@@ -17,12 +16,12 @@ class Motor
 
     void runMotor(bool reverse);
     void calibrateMotor();
-    [[nodiscard]] doorDirection_t getDirection() const;
-    void setCurrentDirection(const doorDirection_t &dir);
+    [[nodiscard]] doorState_t getState() const;
+    void setCurrentState(const doorState_t &dir);
 
     private:
     std::vector<std::unique_ptr<CommonGPIO>> motorCoils;
-    doorDirection_t doorDirection;
+    doorState_t doorState;
     int stepsToEnd;
     int runInstructionsMatrix[8][4];
 };

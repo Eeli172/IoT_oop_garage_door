@@ -1,7 +1,5 @@
 #include "motor_run.h"
-#include <iostream>
 #include <memory>
-#include <any>
 
 #include "../interrupts/interrupts.h"
 #include "pico/util/queue.h"
@@ -10,7 +8,7 @@
 
 
 Motor::Motor(const std::vector<int> &coilGpios, bool inverted) :
-doorDirection(CLOSED),
+doorState(CLOSED),
 stepsToEnd(0),
 runInstructionsMatrix {
     {1, 0, 0, 0},
@@ -37,8 +35,11 @@ void Motor::runMotor(const bool reverse)
     if (reverse) // || !queue_try_remove(&sw1EventQ, &manualStop
     {
         // TO THE LEFT (OPEN)
+        printf("A\n");
+
         while (!queue_try_remove(&lmswEventQ1, &limitFound) && !queue_try_remove(&sw1EventQ, &manualStop))
         {
+            printf("B\n");
             for (int i = 0; i < 8; i++)
             {
                 for (size_t j = 0; j < this->motorCoils.size(); j++)
@@ -48,13 +49,16 @@ void Motor::runMotor(const bool reverse)
                 sleep_ms(1);
             }
         }
+        printf("C\n");
     }
 
     else
     {
+        printf("D\n");
         // TO THE RIGHT (CLOSED)
         while (!queue_try_remove(&lmswEventQ2, &limitFound) && !queue_try_remove(&sw1EventQ, &manualStop))
         {
+            printf("E\n");
             for (int i = 7; i >= 0; i--)
             {
                 for (int j = static_cast<int>(this->motorCoils.size() - 1); j >= 0; j--)
@@ -64,16 +68,9 @@ void Motor::runMotor(const bool reverse)
                 sleep_ms(1);
             }
         }
-    }
-
-    if (limitFound && reverse)
-    {
-        this->doorDirection = CLOSED;
-    }
-
-    if (limitFound && !reverse)
-    {
-        this->doorDirection = OPEN;
+        printf("F\n");
+        printf(limitFound ? "limitFound\n":"limitNOTfound\n");
+        printf(manualStop ? "manualstop\n":"NOmanualstop\n");
     }
 }
 
@@ -86,20 +83,17 @@ void Motor::calibrateMotor()
 
     sleep_ms(100);
 
-    if (!gpio_get(LMSW_1)) //because of this motor doesn't crash into the already pressed switch on start
-    {
-        runMotor(true);
-    }
+    runMotor(true);
 }
 
-doorDirection_t Motor::getDirection() const
+doorState_t Motor::getState() const
 {
-    return this->doorDirection;
+    return this->doorState;
 }
 
-void Motor::setCurrentDirection(const doorDirection_t &dir)
+void Motor::setCurrentState(const doorState_t &dir)
 {
-    this->doorDirection = dir;
+    this->doorState = dir;
 }
 
 

@@ -2,7 +2,6 @@
 // STL
 #include <iostream>
 #include <ostream>
-#include <array>
 
 // CUSTOM
 
@@ -12,8 +11,6 @@
 #include "motor_run/motor_run.h"
 #include "macros/macros.h"
 #include "pico/stdio.h"
-#include "pico/stdio/driver.h"
-#include "pico/stdlib.h"
 #include "gpios/encoder/encoder.h"
 
 /* SYSTEM */
@@ -48,6 +45,7 @@ int main()
     encoder->initInterrupt();
 
     bool queueInput;
+    bool sw1Pressed;
 
     std::cout << "Boot1" << std::endl;
 
@@ -90,30 +88,35 @@ int main()
 
         case CALIBRATED:
 
-            while (queue_try_remove(&sw1EventQ, &queueInput))
+            while (queue_try_remove(&sw1EventQ, &sw1Pressed));
+
+            switch (stepperMotor->getState())
             {
-                switch (stepperMotor->getDirection())
-                {
-                case CLOSED:
-                    stepperMotor->setCurrentDirection(OPENING);
-                    stepperMotor->runMotor(false);
-                    break;
-
-                case OPEN:
-                    stepperMotor->setCurrentDirection(CLOSING);
-                    stepperMotor->runMotor(true);
-                    break;
-
-                case OPENING:
-                    stepperMotor->setCurrentDirection(CLOSING);
-                    stepperMotor->runMotor(true);
-                    break;
-
-                case CLOSING:
-                    stepperMotor->setCurrentDirection(OPENING);
-                    stepperMotor->runMotor(false);
-                    break;
+            case CLOSED:
+                if (sw1Pressed) {
+                    printf("CLOSED\n");
+                    stepperMotor->setCurrentState(OPENING);
+                    sw1Pressed = false;
                 }
+                break;
+
+            case OPENING:
+                stepperMotor->runMotor(false);
+                stepperMotor->setCurrentState(OPEN);
+                break;
+
+            case OPEN:
+                if (sw1Pressed) {
+                    printf("OPEN\n");
+                    stepperMotor->setCurrentState(CLOSING);
+                    sw1Pressed = false;
+                }
+                break;
+    
+            case CLOSING:
+                stepperMotor->runMotor(true);
+                stepperMotor->setCurrentState(CLOSED);
+                break;
             }
         }
     }

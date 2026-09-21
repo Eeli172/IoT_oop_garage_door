@@ -1,7 +1,6 @@
 #include "pico/stdlib.h" // IWYU pragma: keep
 #include "gpios.h"
 #include <memory>
-#include <array>
 #include <iostream>
 
 #include "../interrupts/interrupts.h"

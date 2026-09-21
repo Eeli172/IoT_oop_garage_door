@@ -1,9 +1,5 @@
 #include "interrupts.h"
 #include "../macros/macros.h"
-#include <iostream>
-#include "../gpios/encoder/encoder.h"
-
-#include "hardware/gpio.h"
 
 /* ISR QUEUES */
 queue_t sw0EventQ;
@@ -17,36 +13,40 @@ queue_t encBEventQ;
 void commonIsr(const uint gpio, uint32_t eventMask)
 {
     constexpr bool value = true;
+    const absolute_time_t now = get_absolute_time();
+    static absolute_time_t previous;
+    if (absolute_time_diff_us(previous, now) > 1000000) {// 1000 ms
 
-    switch (gpio)
-    {
-        case SW0:
+        switch (gpio)
+        {
+            case SW0:
             queue_try_add(&sw0EventQ, &value);
-        break;
+            break;
 
-        case SW1:
-        queue_try_add(&sw1EventQ, &value);
-        break;
+            case SW1:
+            queue_try_add(&sw1EventQ, &value);
+            break;
 
-        case SW2:
-        queue_try_add(&sw2EventQ, &value);
-        break;
+            case SW2:
+            queue_try_add(&sw2EventQ, &value);
+            break;
 
-        case LMSW_1:
-        queue_try_add(&lmswEventQ1, &value);
-        break;
+            case LMSW_1:
+            queue_try_add(&lmswEventQ1, &value);
+            break;
 
-        case LMSW_2:
-        queue_try_add(&lmswEventQ2, &value);
-        break;
+            case LMSW_2:
+            queue_try_add(&lmswEventQ2, &value);
+            break;
 
-        case ENCODER_A:
-        queue_try_add(&encAEventQ, &value);
-        break;
+            case ENCODER_A:
+            queue_try_add(&encAEventQ, &value);
+            break;
 
-        case ENCODER_B:
-        queue_try_add(&encBEventQ, &value);
-        break;
+            case ENCODER_B:
+            queue_try_add(&encBEventQ, &value);
+            break;
+        }
     }
 }
 
