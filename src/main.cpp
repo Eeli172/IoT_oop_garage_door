@@ -18,7 +18,7 @@
 
 /* SYSTEM */
 // STATE MACHINE ENUM
-typedef enum { PRE_CALIB, CALIB, PRE_RUN, RUN } stateMachine;
+typedef enum { PRE_CALIB, CALIBRATING, CALIBRATED } stateMachine;
 
 // SYSTEM VARIABLES STRUCT
 typedef struct System
@@ -37,7 +37,6 @@ int main()
     sB->currentState = PRE_CALIB;
     sB->isCalibrated = false;
     sB->encoderPos = 0;
-
 
     const auto stepperMotor = std::make_unique<Motor>(std::vector{COIL_1, COIL_2, COIL_3, COIL_4}, false);
     const auto userButtons = std::make_unique<Switches>(std::vector{SW0, SW1, SW2}, true, true, true);
@@ -73,29 +72,49 @@ int main()
         switch (sB->currentState)
         {
         case PRE_CALIB:
-            while (queue_try_remove(&sw0EventQ, &queueInput) && queue_try_remove(&sw2EventQ, &queueInput))
+            if (queue_try_remove(&sw0EventQ, &queueInput) && queue_try_remove(&sw2EventQ, &queueInput))
             {
-                sB->currentState = CALIB;
+                sB->currentState = CALIBRATING;
             }
             break;
 
-        case CALIB:
+        case CALIBRATING:
             // [1] Calling class function calibrateMotor
             limitSwitches->firstInitInterrupts({true, true});
             std::cout << "Calibration start: " << std::endl;
             stepperMotor->calibrateMotor();
             std::cout << "Calibration finished" << std::endl;
-            sB->currentState = PRE_RUN;
+            userButtons->modifyInterrupts(std::vector{SW0, SW1, SW2}, std::vector{false, true, false});
+            sB->currentState = CALIBRATED;
             break;
 
-        case PRE_RUN:
-            //     std::cout << "Run start: " << std::endl;
+        case CALIBRATED:
 
-            // SW1 kontrollinappi --> eri toimintoja
-            break;
+            while (queue_try_remove(&sw1EventQ, &queueInput))
+            {
+                switch (stepperMotor->getDirection())
+                {
+                case CLOSED:
+                    stepperMotor->setCurrentDirection(OPENING);
+                    stepperMotor->runMotor(false);
+                    break;
 
-        case RUN:
-            break;
+                case OPEN:
+                    stepperMotor->setCurrentDirection(CLOSING);
+                    stepperMotor->runMotor(true);
+                    break;
+
+                case OPENING:
+                    stepperMotor->setCurrentDirection(CLOSING);
+                    stepperMotor->runMotor(true);
+                    break;
+
+                case CLOSING:
+                    stepperMotor->setCurrentDirection(OPENING);
+                    stepperMotor->runMotor(false);
+                    break;
+                }
+            }
         }
     }
 }
