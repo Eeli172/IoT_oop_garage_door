@@ -13,7 +13,7 @@ class Motor
     Motor(const Motor &) = delete; // Copy-constructors denied.
     ~Motor() = default;
 
-    void runMotor();
+    void runMotor(bool reverse);
     void calibrateMotor() const;
 
     private:

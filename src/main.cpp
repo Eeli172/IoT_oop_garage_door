@@ -25,27 +25,24 @@ typedef struct System
     stateMachine currentState;
     bool isCalibrated;
     uint encoderPos;
-    std::unique_ptr<Motor> stepperMotor;
-    std::unique_ptr<Switches> userButtons;
-    std::unique_ptr<Switches> limitSwitches;
-
 } systemBank;
 
 int main() {
     stdio_init_all();
     sleep_ms(2000);
 
-    System sB {
-        .currentState = PRE_CALIB,
-        .isCalibrated = false,
-        .encoderPos = 0,
-        .stepperMotor = std::make_unique<Motor>(std::vector {COIL_1, COIL_2, COIL_3, COIL_4}, false),
-        .userButtons = std::make_unique<Switches>(std::vector {SW0, SW1, SW2}, true, true, true),
-        .limitSwitches = std::make_unique<Switches>(std::vector {LMSW_1, LMSW_2}, true, true, true),
-    };
+    const auto sB = std::make_unique<systemBank>();
+    sB->currentState = PRE_CALIB;
+    sB->isCalibrated = false;
+    sB->encoderPos = 0;
+
+
+    const auto stepperMotor = std::make_unique<Motor>(std::vector {COIL_1, COIL_2, COIL_3, COIL_4}, false);
+    const auto userButtons = std::make_unique<Switches>(std::vector {SW0, SW1, SW2}, true, true, true);
+    const auto limitSwitches = std::make_unique<Switches>(std::vector {LMSW_1, LMSW_2}, true, true, true);
     
     initQueues();
-    sB.userButtons->firstInitInterrupts({true, false, true});
+    userButtons->firstInitInterrupts({true, false, true});
     
     bool queueInput;
 
@@ -53,21 +50,21 @@ int main() {
 
     while (true)
     {
-        switch (sB.currentState)
+        switch (sB->currentState)
         {
             case PRE_CALIB:
             while (queue_try_remove(&sw0EventQ, &queueInput) && queue_try_remove(&sw2EventQ, &queueInput))
             {
-                sB.currentState = CALIB;
+                sB->currentState = CALIB;
             }
             break;
             
             case CALIB:
                 // [1] Calling class function calibrateMotor
-                sB.limitSwitches->firstInitInterrupts({true, true});
+                limitSwitches->firstInitInterrupts({true, true});
                 std::cout << "Calibration start: " << std::endl;
-                sB.stepperMotor->calibrateMotor();
-                sB.currentState = PRE_RUN;
+                stepperMotor->calibrateMotor();
+                sB->currentState = PRE_RUN;
             break;
 
             case PRE_RUN:
