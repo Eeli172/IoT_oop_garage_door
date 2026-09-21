@@ -29,6 +29,8 @@ add_executable(${PROJECT_NAME}
         src/gpios/gpios.cpp
         src/motor_run/motor_run.cpp
         src/mqtt/mqtt.cpp
+        src/gpios/encoder/encoder.cpp
+        src/gpios/encoder/encoder.h
 )
 
 # Create map/bin/hex/uf2 files

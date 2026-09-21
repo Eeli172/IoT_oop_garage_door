@@ -12,6 +12,10 @@
 #define LMSW_1 16
 #define LMSW_2 17
 
+// ENCODERS
+#define ENCODER_A 28
+#define ENCODER_B 27
+
 // MOTOR COIL GPIOS
 #define COIL_1 2
 #define COIL_2 3

@@ -1,70 +1,3 @@
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 #include "motor_run.h"
 
 #include <iostream>
@@ -100,31 +33,35 @@ void Motor::calibrateMotor() const
 
     while (!calibrated)
     {
-        // TO THE RIGHT
-        while (!queue_try_remove(&lmswEventQ, &limitFound))
+        if (!gpio_get(LMSW_2))//because of this motor doesn't crash into the already pressed switch on start
         {
-            for (int i = 7; i >= 0; i--)
+            while (!queue_try_remove(&lmswEventQ2, &limitFound))
             {
-                for (int j = static_cast<int>(this->motorCoils.size() - 1); j >= 0; j--)
+                for (int i = 7; i >= 0; i--)
                 {
-                    gpio_put(this->motorCoils[j]->getPin(), this->runInstructionsMatrix[i][j]);
+                    for (int j = static_cast<int>(this->motorCoils.size() - 1); j >= 0; j--)
+                    {
+                        gpio_put(this->motorCoils[j]->getPin(), this->runInstructionsMatrix[i][j]);
+                    }
+                    sleep_ms(1);
                 }
-                sleep_ms(2);
             }
         }
-
         sleep_ms(100);
 
-        // TO THE LEFT
-        while (!queue_try_remove(&lmswEventQ, &limitFound))
+        if (!gpio_get(LMSW_1))//because of this motor doesn't crash into the already pressed switch on start
         {
-            for (int i = 0; i < 8; i++)
+            // TO THE LEFT
+            while (!queue_try_remove(&lmswEventQ1, &limitFound))
             {
-                for (int j = 0; j < this->motorCoils.size(); j++)
+                for (int i = 0; i < 8; i++)
                 {
-                    gpio_put(this->motorCoils[j]->getPin(), this->runInstructionsMatrix[i][j]);
+                    for (int j = 0; j < this->motorCoils.size(); j++)
+                    {
+                        gpio_put(this->motorCoils[j]->getPin(), this->runInstructionsMatrix[i][j]);
+                    }
+                    sleep_ms(1);
                 }
-                sleep_ms(2);
             }
         }
 
