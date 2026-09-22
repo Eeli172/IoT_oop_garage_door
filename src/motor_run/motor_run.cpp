@@ -29,15 +29,15 @@ runInstructionsMatrix {
 
 void Motor::runMotor(const bool reverse)
 {
-    bool limitFound = false;
-    bool manualStop = false;
+    uint limitGpio;
+    bool manualStopGpio = false;
 
     if (reverse) // || !queue_try_remove(&sw1EventQ, &manualStop
     {
         // TO THE LEFT (OPEN)
         printf("A\n");
 
-        while (!queue_try_remove(&lmswEventQ1, &limitFound) && !queue_try_remove(&sw1EventQ, &manualStop))
+        while (!queue_try_remove(&lmswEventQ, &limitGpio) && !queue_try_remove(&sw1EventQ, &manualStopGpio))
         {
             printf("B\n");
             for (int i = 0; i < 8; i++)
@@ -49,6 +49,8 @@ void Motor::runMotor(const bool reverse)
                 sleep_ms(1);
             }
         }
+
+        if (!limitGpio) gpio_set_irq_enabled(limitGpio, GPIO_IRQ_EDGE_FALL, true);
         printf("C\n");
     }
 
@@ -56,7 +58,7 @@ void Motor::runMotor(const bool reverse)
     {
         printf("D\n");
         // TO THE RIGHT (CLOSED)
-        while (!queue_try_remove(&lmswEventQ2, &limitFound) && !queue_try_remove(&sw1EventQ, &manualStop))
+        while (!queue_try_remove(&lmswEventQ, &limitGpio) && !queue_try_remove(&sw1EventQ, &manualStopGpio))
         {
             printf("E\n");
             for (int i = 7; i >= 0; i--)
@@ -68,9 +70,10 @@ void Motor::runMotor(const bool reverse)
                 sleep_ms(1);
             }
         }
+
+        if (!limitGpio) gpio_set_irq_enabled(limitGpio, GPIO_IRQ_EDGE_FALL, true);
+
         printf("F\n");
-        printf(limitFound ? "limitFound\n":"limitNOTfound\n");
-        printf(manualStop ? "manualstop\n":"NOmanualstop\n");
     }
 }
 

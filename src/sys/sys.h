@@ -2,7 +2,6 @@
 #define GARAGE_DOOR_SYS_H
 
 /* STL */
-#include <any>
 
 /* CUSTOM */
 #include "../motor_run/motor_run.h"
@@ -12,18 +11,20 @@
 typedef enum { PRE_CALIB, CALIBRATING, CALIBRATED } stateMachine_t;
 
 // SYSTEM MAIN CLASS
-class sys
+class Sys
 {
 public:
-    sys();
-    sys(const stateMachine_t &initSysState, bool &calibrationStatus, int &initEncoderPos, doorState_t &initDoorState);
-    sys(const sys&) = delete;
-    ~sys() = default;
+    Sys();
+    Sys(const Sys&) = delete;
+    ~Sys() = default;
 
-    void setCommonValue(const std::any &value);
-    void getCommonValue(std::string key="default");
-    void saveEEPROM();
-    void loadEEPROM();
+    void setSysState(stateMachine_t &state);
+    void setCalibrationStatus(bool &status);
+    void setEncoderPos(int &pos);
+    void setDoorState(doorState_t &state);
+
+    void saveSystem();
+    void loadSystem();
 
 private:
     stateMachine_t sysState;

@@ -5,9 +5,9 @@
 #include <any>
 #include <typeinfo>
 #include <sys/stat.h>
+
 // CUSTOM
 #include "sys/sys.h"
-#include "pico/types.h"
 #include "gpios/gpios.h"
 #include "interrupts/interrupts.h"
 #include "motor_run/motor_run.h"
@@ -41,19 +41,19 @@ int main()
     const auto encoder = std::make_unique<Encoder>(ENCODER_A, ENCODER_B, false);
 
     initQueues();
-    userButtons->firstInitInterrupts({true, false, true});
     encoder->initInterrupt();
 
-    bool queueInput;
-    bool sw1Pressed;
+    uint sw0Pressed;
+    uint sw1Pressed;
+    uint sw2Pressed;
 
     std::cout << "Boot1" << std::endl;
-
+    userButtons->firstInitInterrupts({true, false, true});
     while (true)
     {
 
-        //Encoder in main
-        while (queue_try_remove(&encAEventQ, &queueInput))
+        /*Encoder in main
+        while (queue_try_remove(&encEventQ, &queueInput))
         {
             if (const EncoderState dir = encoder->checkDirection(); dir == EncoderState::Clockwise)
             {
@@ -63,12 +63,14 @@ int main()
             {
                 std::cout << "Encoder: Counter-clockwise" << std::endl;
             }
-        }
+            // INTERRUPTEJA EI ENÄÄN EKAN KERRAN JÄLKEEN TAPAHDU --> TEE ENCODER LUOKKAAN modifyInterurpts funktion.
+
+        }*/
 
         switch (sB->currentState)
         {
         case PRE_CALIB:
-            while (queue_try_remove(&sw0EventQ, &queueInput) && queue_try_remove(&sw2EventQ, &queueInput))
+            while (queue_try_remove(&sw0EventQ, &sw0Pressed) || queue_try_remove(&sw2EventQ, &sw2Pressed))
             {
                 sB->currentState = CALIBRATING;
             }
@@ -80,7 +82,7 @@ int main()
             std::cout << "Calibration start: " << std::endl;
             stepperMotor->calibrateMotor();
             std::cout << "Calibration finished" << std::endl;
-            userButtons->modifyInterrupts(std::vector{SW0, SW1, SW2}, std::vector{false, true, false});
+            userButtons->modifyInterrupts(std::vector{SW1}, std::vector{true});
             sB->currentState = CALIBRATED;
             break;
 
@@ -99,6 +101,7 @@ int main()
                 break;
 
             case OPENING:
+                userButtons->modifyInterrupts(std::vector{SW1}, std::vector{true});
                 stepperMotor->runMotor(false);
                 stepperMotor->setCurrentState(OPEN);
                 break;
@@ -112,6 +115,7 @@ int main()
                 break;
     
             case CLOSING:
+                userButtons->modifyInterrupts(std::vector{SW1}, std::vector{true});
                 stepperMotor->runMotor(true);
                 stepperMotor->setCurrentState(CLOSED);
                 break;

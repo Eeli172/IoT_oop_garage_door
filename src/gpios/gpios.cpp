@@ -136,8 +136,6 @@ void Switches::modifyInterrupts(const std::vector<int> &swPins, const std::vecto
     }
 }
 
-
-
 // SYSTEM STATUS LEDS
 StatusLeds::StatusLeds(const std::vector<int> &ledGpios, bool inverted)
 {
