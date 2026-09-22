@@ -26,21 +26,30 @@ private:
 };
 
 
-
 // SWITCH HUB (SW0, SW1, SW2)
 class Switches {
 public:
     Switches(const std::vector<int> &pins, bool input, bool pullup, bool inverted);
     Switches(const Switches &) = delete;
-    ~Switches() = default;
+    virtual ~Switches() = default;
 
     void firstInitInterrupts(const std::vector<bool> &switchStates) const;
     void modifyInterrupts(const std::vector<int> &swPins, const std::vector<bool> &interruptStates) const;
+    virtual bool checkFlushQueues(std::vector<int> &checkPins);
 
 private:
     std::vector<std::unique_ptr<CommonGPIO>> switches;
 };
 
+class LimitSwitches : public Switches
+{
+    public:
+    LimitSwitches(const std::vector<int> &pins, bool input, bool pullup, bool inverted);
+    LimitSwitches(const LimitSwitches &) = delete;
+    ~LimitSwitches() override = default;
+
+    bool checkFlushQueues(std::vector<int>& checkPins) override;
+};
 
 // LED HUB (GPIO: 20, 21, 22)
 class StatusLeds

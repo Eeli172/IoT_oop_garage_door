@@ -16,13 +16,6 @@
 #include "gpios/encoder/encoder.h"
 
 /* SYSTEM */
-// SYSTEM VARIABLES STRUCT
-typedef struct System
-{
-    stateMachine_t currentState;
-    bool isCalibrated;
-    uint encoderPos;
-} systemBank;
 
 
 int main()
@@ -30,10 +23,7 @@ int main()
     stdio_init_all();
     sleep_ms(500);
 
-    const auto sB = std::make_unique<systemBank>();
-    sB->currentState = PRE_CALIB;
-    sB->isCalibrated = false;
-    sB->encoderPos = 0;
+    System sys;
 
     const auto stepperMotor = std::make_unique<Motor>(std::vector{COIL_1, COIL_2, COIL_3, COIL_4}, false);
     const auto userButtons = std::make_unique<Switches>(std::vector{SW0, SW1, SW2}, true, true, true);
@@ -67,12 +57,12 @@ int main()
 
         }*/
 
-        switch (sB->currentState)
+        switch (sys.getSysState())
         {
         case PRE_CALIB:
-            while (queue_try_remove(&sw0EventQ, &sw0Pressed) || queue_try_remove(&sw2EventQ, &sw2Pressed))
+            while (queue_try_remove(&sw0EventQ, &sw0Pressed) && queue_try_remove(&sw2EventQ, &sw2Pressed))
             {
-                sB->currentState = CALIBRATING;
+                sys.setSysState(CALIBRATING);
             }
             break;
 
@@ -83,7 +73,7 @@ int main()
             stepperMotor->calibrateMotor();
             std::cout << "Calibration finished" << std::endl;
             userButtons->modifyInterrupts(std::vector{SW1}, std::vector{true});
-            sB->currentState = CALIBRATED;
+            sys.setSysState(CALIBRATED);
             break;
 
         case CALIBRATED:

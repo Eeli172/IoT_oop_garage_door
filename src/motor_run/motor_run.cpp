@@ -9,8 +9,15 @@
 
 Motor::Motor(const std::vector<int> &coilGpios, bool inverted) :
 doorState(CLOSED),
-stepsToEnd(0),
-runInstructionsMatrix {
+stepsToEnd(0)
+{
+    for (const auto &coilPin : coilGpios)
+    {
+        this->motorCoils.push_back(std::make_unique<CommonGPIO>(coilPin, false, false, inverted));
+    }
+}
+
+int Motor::runInstructionsMatrix[8][4] = {
     {1, 0, 0, 0},
     {1, 1, 0, 0},
     {0, 1, 0, 0},
@@ -19,13 +26,7 @@ runInstructionsMatrix {
     {0, 0, 1, 1},
     {0, 0, 0, 1},
     {1, 0, 0, 1}
-}
-{
-    for (const auto &coilPin : coilGpios)
-    {
-        this->motorCoils.push_back(std::make_unique<CommonGPIO>(coilPin, false, false, inverted));
-    }
-}
+};
 
 void Motor::runMotor(const bool reverse)
 {

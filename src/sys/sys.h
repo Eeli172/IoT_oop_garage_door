@@ -11,17 +11,18 @@
 typedef enum { PRE_CALIB, CALIBRATING, CALIBRATED } stateMachine_t;
 
 // SYSTEM MAIN CLASS
-class Sys
+class System
 {
 public:
-    Sys();
-    Sys(const Sys&) = delete;
-    ~Sys() = default;
+    System();
+    System(const System&) = delete;
+    ~System() = default;
 
-    void setSysState(stateMachine_t &state);
-    void setCalibrationStatus(bool &status);
-    void setEncoderPos(int &pos);
-    void setDoorState(doorState_t &state);
+    void setSysState(const stateMachine_t &state);
+    void setCalibrationStatus(const bool &status);
+    void setDoorState(const doorState_t &state);
+
+    stateMachine_t getSysState() const;
 
     void saveSystem();
     void loadSystem();
@@ -29,7 +30,6 @@ public:
 private:
     stateMachine_t sysState;
     bool calibrationStatus;
-    int encoderPos;
     doorState_t doorState;
 };
 

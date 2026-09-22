@@ -1,10 +1,13 @@
-#include "pico/stdlib.h" // IWYU pragma: keep
-#include "gpios.h"
+/* STL */
 #include <memory>
 #include <iostream>
 
+/* CUSTOM */
 #include "../interrupts/interrupts.h"
 #include "../macros/macros.h"
+#include "pico/stdlib.h" // IWYU pragma: keep
+#include "pico/util/queue.h"
+#include "gpios.h"
 
 
 

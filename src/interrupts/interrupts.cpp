@@ -14,29 +14,31 @@ void commonIsr(const uint gpio, const uint32_t eventMask)
     gpio_set_irq_enabled(gpio, eventMask, false);
 
     static absolute_time_t previous;
+    static constexpr bool queueValue = true;
+
 
     if (absolute_time_diff_us(previous, get_absolute_time()) > 500000) {// 1000 ms
 
         previous = get_absolute_time();
 
         if (gpio == LMSW_1 || gpio == LMSW_2) {
-            queue_try_add(&lmswEventQ, &gpio);
+            queue_try_add(&lmswEventQ, &queueValue);
         }
 
         else if (gpio == SW0) {
-            queue_try_add(&sw0EventQ, &gpio);
+            queue_try_add(&sw0EventQ, &queueValue);
         }
 
         else if (gpio == SW1) {
-            queue_try_add(&sw1EventQ, &gpio);
+            queue_try_add(&sw1EventQ, &queueValue);
         }
 
         else if (gpio == SW2) {
-            queue_try_add(&sw2EventQ, &gpio);
+            queue_try_add(&sw2EventQ, &queueValue);
         }
 
         else if (gpio == ENCODER_A || gpio == ENCODER_B) {
-            queue_try_add(&encEventQ, &gpio);
+            queue_try_add(&encEventQ, &queueValue);
         }
     }
 }
