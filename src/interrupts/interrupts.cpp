@@ -13,10 +13,11 @@ queue_t encBEventQ;
 void commonIsr(const uint gpio, uint32_t eventMask)
 {
     constexpr bool value = true;
-    const absolute_time_t now = get_absolute_time();
     static absolute_time_t previous;
-    if (absolute_time_diff_us(previous, now) > 1000000) {// 1000 ms
 
+    if (absolute_time_diff_us(previous, get_absolute_time()) > 1000000) {// 1000 ms
+
+        previous = get_absolute_time();
         switch (gpio)
         {
             case SW0:

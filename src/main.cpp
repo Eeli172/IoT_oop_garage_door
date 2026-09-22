@@ -2,9 +2,11 @@
 // STL
 #include <iostream>
 #include <ostream>
-
+#include <any>
+#include <typeinfo>
+#include <sys/stat.h>
 // CUSTOM
-
+#include "sys/sys.h"
 #include "pico/types.h"
 #include "gpios/gpios.h"
 #include "interrupts/interrupts.h"
@@ -14,16 +16,14 @@
 #include "gpios/encoder/encoder.h"
 
 /* SYSTEM */
-// STATE MACHINE ENUM
-typedef enum { PRE_CALIB, CALIBRATING, CALIBRATED } stateMachine;
-
 // SYSTEM VARIABLES STRUCT
 typedef struct System
 {
-    stateMachine currentState;
+    stateMachine_t currentState;
     bool isCalibrated;
     uint encoderPos;
 } systemBank;
+
 
 int main()
 {
@@ -53,11 +53,9 @@ int main()
     {
 
         //Encoder in main
-        if (queue_try_remove(&encAEventQ, &queueInput))
+        while (queue_try_remove(&encAEventQ, &queueInput))
         {
-            EncoderState dir = encoder->checkDirection();
-
-            if (dir == EncoderState::Clockwise)
+            if (const EncoderState dir = encoder->checkDirection(); dir == EncoderState::Clockwise)
             {
                 std::cout << "Encoder: Clockwise" << std::endl;
             }
@@ -70,7 +68,7 @@ int main()
         switch (sB->currentState)
         {
         case PRE_CALIB:
-            if (queue_try_remove(&sw0EventQ, &queueInput) && queue_try_remove(&sw2EventQ, &queueInput))
+            while (queue_try_remove(&sw0EventQ, &queueInput) && queue_try_remove(&sw2EventQ, &queueInput))
             {
                 sB->currentState = CALIBRATING;
             }
@@ -88,7 +86,7 @@ int main()
 
         case CALIBRATED:
 
-            while (queue_try_remove(&sw1EventQ, &sw1Pressed));
+            while (queue_try_remove(&sw1EventQ, &sw1Pressed))
 
             switch (stepperMotor->getState())
             {
