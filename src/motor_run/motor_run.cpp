@@ -11,7 +11,8 @@
 Motor::Motor(const std::vector<int> &coilGpios, bool inverted) :
 currentDoorState(CLOSED),
 stepsToEnd(0),
-step(0)
+step(0),
+direction(true)
 {
     for (const auto &coilPin : coilGpios)
     {
@@ -61,7 +62,6 @@ bool Motor::runMotor()
 
 void Motor::calibrateMotor()
 {
-    direction = true;
     if (!gpio_get(PIN_LMSW_ENC)) // because of this motor doesn't crash into the already pressed switch on start
     {
         runMotor();

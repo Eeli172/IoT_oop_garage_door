@@ -16,28 +16,28 @@ void commonIsr(const uint gpio, const uint32_t eventMask)
     if (gpio == PIN_ENCODER_A || gpio == PIN_ENCODER_B) {
         queue_try_add(&encEventQ, &value);
     }
-
-    else if (absolute_time_diff_us(previous, get_absolute_time()) > INTERRUPT_TIMEOUT_MS * 1000) {
-
-        previous = get_absolute_time();
-
-        if (eventMask == GPIO_IRQ_EDGE_FALL)
-        {
-            switch (gpio)
+    else {
+        
+        if (absolute_time_diff_us(previous, get_absolute_time()) > INTERRUPT_TIMEOUT_MS * 1000) {
+            if (eventMask == GPIO_IRQ_EDGE_FALL)
             {
-            case PIN_LMSW_ENC:
-                queue_try_add(&lmswEncEventQ, &value);
-                break;
+                switch (gpio)
+                {
+                    case PIN_LMSW_ENC:
+                    queue_try_add(&lmswEncEventQ, &value);
+                    break;
 
-            case PIN_LMSW_MTR:
-                queue_try_add(&lmswMtrEventQ, &value);
-                break;
-
-            case PIN_SW1:
+                    case PIN_LMSW_MTR:
+                    queue_try_add(&lmswMtrEventQ, &value);
+                    break;
+                    
+                case PIN_SW1:
                 queue_try_add(&sw1EventQ, &value);
                 break;
+                }
             }
         }
+    previous = get_absolute_time();
     }
 }
 

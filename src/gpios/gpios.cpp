@@ -104,7 +104,7 @@ Switches::Switches(const std::vector<int> &pins, bool input, bool pullup, bool i
 void Switches::enableInterrupts(const std::vector<int> &swPins) const
 {
     if (swPins.size() > SW_AMOUNT){
-        std::cerr << "System does not support over ["<< SW_AMOUNT <<"] per class." << std::endl;
+        std::cerr << "System does not support over [ "<< SW_AMOUNT <<" ] per class." << std::endl;
         return;
     }
 
@@ -131,7 +131,7 @@ void Switches::initInterrupts(const std::vector<int> &swPins, const std::vector<
         {
             if (swPins[i] == swGpio->getPin())
             {
-                gpio_set_irq_enabled_with_callback(swPins[i], GPIO_IRQ_EDGE_FALL, initStates[i], &commonIsr);
+                gpio_set_irq_enabled_with_callback(swPins[i], GPIO_IRQ_EDGE_FALL | GPIO_IRQ_EDGE_RISE, initStates[i], &commonIsr);
                 break;
             }
         }

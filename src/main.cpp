@@ -34,7 +34,6 @@ int main()
     initQueues();
     encoder->initInterrupt();
 
-    limitSwitches->initInterrupts(std::vector {PIN_LMSW_ENC, PIN_LMSW_MTR}, std::vector {false, false});
 
     std::cout << "\n B O O T\n" << std::endl;
     while (true)
@@ -63,14 +62,16 @@ int main()
             }
             break;
 
+
         case CALIBRATING:
             // [1] Calling class function calibrateMotor
-            std::cout << "Calibration start: " << std::endl;
+            std::cout << "Calibration: started" << std::endl;
             stepperMotor->calibrateMotor();
-            std::cout << "Calibration finished" << std::endl;
+            std::cout << "Calibration: finished" << std::endl;
             userButtons->initInterrupts(std::vector {PIN_SW1}, std::vector {true});
             sys.setSysState(CALIBRATED);
             break;
+
 
         case CALIBRATED:
             switch (stepperMotor->getCurrentState())
@@ -94,8 +95,7 @@ int main()
                     {
                         stepperMotor->setCurrentState(CLOSED);
                     }
-                }
-
+                } 
                 else
                 {
                     while (!queue_try_remove(&sw1EventQ, &queueDummy)) {}
@@ -108,34 +108,6 @@ int main()
                     stepperMotor->setCurrentState(IN_BETWEEN); // PREVIOUS-STATE = OPEN, CURRENT_STATE = IN_BETWEEN
                 }
                 break;
-
-            /*
-            case OPENING:
-                // open until sw1 or limit switch is pressed
-                printf("OPENING\n");
-                if (stepperMotor->runMotor()) {
-                    stepperMotor->setCurrentState(STOPPED);
-                }
-                else stepperMotor->setCurrentState(OPEN);
-                break;
-
-            case CLOSING:
-                // close until sw1 or limit switch is pressed
-                printf("CLOSING\n");
-                if (stepperMotor->runMotor()) {
-                    stepperMotor->setCurrentState(STOPPED);
-                }
-                else stepperMotor->setCurrentState(CLOSED);
-                break;
-
-            case STOPPED: 
-                // press sw1 to continue into the opposite direction
-                if (queue_try_remove(&sw1EventQ, &queueDummy)) {
-                    if (stepperMotor->getDirection()) { // TO THE RIGHT
-                        stepperMotor->setCurrentState(OPENING);
-                    }
-                    else stepperMotor->setCurrentState(CLOSING);
-                } */
             }
         }
     }
