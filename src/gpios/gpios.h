@@ -24,13 +24,15 @@ private:
 };
 
 
+
 // SWITCH HUB (SW0, SW1, SW2)
 class Switches {
 public:
     Switches(const std::vector<int> &pins, bool input, bool pullup, bool inverted);
     Switches(const Switches &) = delete;
-    virtual ~Switches() = default;
+    ~Switches() = default;
 
+    void initInterrupts(const std::vector<int> &swPins, const std::vector<bool> &initStates);
     void enableInterrupts(const std::vector<int> &swPins) const;
 
 private:

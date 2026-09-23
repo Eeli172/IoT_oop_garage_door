@@ -34,15 +34,13 @@ int main()
     initQueues();
     encoder->initInterrupt();
 
-    gpio_set_irq_enabled_with_callback(PIN_LMSW_MTR, GPIO_IRQ_EDGE_FALL, false, &commonIsr);
-    gpio_set_irq_enabled_with_callback(PIN_LMSW_ENC, GPIO_IRQ_EDGE_FALL, false, &commonIsr);
-    gpio_set_irq_enabled_with_callback(PIN_SW1, GPIO_IRQ_EDGE_FALL, false, &commonIsr);
+    limitSwitches->initInterrupts(std::vector {PIN_LMSW_ENC, PIN_LMSW_MTR}, std::vector {false, false});
 
     std::cout << "\n B O O T\n" << std::endl;
     while (true)
     {
 
-        /*Encoder in main
+        /* Encoder in main
         while (queue_try_remove(&encEventQ, &queueInput))
         {
             if (const EncoderState dir = encoder->checkDirection(); dir == EncoderState::Clockwise)
@@ -55,7 +53,7 @@ int main()
             }
             // INTERRUPTEJA EI ENÄÄN EKAN KERRAN JÄLKEEN TAPAHDU --> TEE ENCODER LUOKKAAN modifyInterurpts funktion.
 
-        }*/
+        } */
 
         switch (sys.getSysState())
         {
@@ -70,27 +68,48 @@ int main()
             std::cout << "Calibration start: " << std::endl;
             stepperMotor->calibrateMotor();
             std::cout << "Calibration finished" << std::endl;
-            gpio_set_irq_enabled(PIN_SW1, GPIO_IRQ_EDGE_FALL, true);
+            userButtons->initInterrupts(std::vector {PIN_SW1}, std::vector {true});
             sys.setSysState(CALIBRATED);
             break;
 
         case CALIBRATED:
-            switch (stepperMotor->getState())
+            switch (stepperMotor->getCurrentState())
             {
             case CLOSED: 
                 // press sw1 to open
                 if (queue_try_remove(&sw1EventQ, &queueDummy)) {
-                    stepperMotor->setCurrentState(OPENING);
+                    stepperMotor->setCurrentState(IN_BETWEEN); // PREVIOUS-STATE = CLOSED, CURRENT_STATE = IN_BETWEEN
                 }
                 break;
-    
+
+            case IN_BETWEEN:
+                if (!stepperMotor->runMotor()) // AJAA PÄÄTYYN ASTI
+                {
+                    if (stepperMotor->getPreviousState() == CLOSED) // JOS TULEE VASEMMALTA (OLI SULJETTU)
+                    {
+                        stepperMotor->setCurrentState(OPEN);
+                    }
+
+                    else if (stepperMotor->getPreviousState() == OPEN) // JOS TULEE OIKEALTA (OLI AUKI)
+                    {
+                        stepperMotor->setCurrentState(CLOSED);
+                    }
+                }
+
+                else
+                {
+                    while (!queue_try_remove(&sw1EventQ, &queueDummy)) {}
+                }
+                break;
+
             case OPEN:
                 // press sw1 to close
                 if (queue_try_remove(&sw1EventQ, &queueDummy)) {
-                    stepperMotor->setCurrentState(CLOSING);
+                    stepperMotor->setCurrentState(IN_BETWEEN); // PREVIOUS-STATE = OPEN, CURRENT_STATE = IN_BETWEEN
                 }
                 break;
-                
+
+            /*
             case OPENING:
                 // open until sw1 or limit switch is pressed
                 printf("OPENING\n");
@@ -111,14 +130,12 @@ int main()
 
             case STOPPED: 
                 // press sw1 to continue into the opposite direction
-                flushQueue(&lmswMtrEventQ);
                 if (queue_try_remove(&sw1EventQ, &queueDummy)) {
-                    if (stepperMotor->getDirection()) {
+                    if (stepperMotor->getDirection()) { // TO THE RIGHT
                         stepperMotor->setCurrentState(OPENING);
                     }
                     else stepperMotor->setCurrentState(CLOSING);
-                }
-
+                } */
             }
         }
     }

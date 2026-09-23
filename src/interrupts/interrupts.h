@@ -11,7 +11,6 @@ extern queue_t encEventQ;
 
 /* EVENT FUNCTIONS / CLASSES */
 void commonIsr(uint gpio, uint32_t eventMask);
-void flushQueue(queue_t *queue);
 void initQueues();
 
 

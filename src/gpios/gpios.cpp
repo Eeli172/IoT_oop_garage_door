@@ -7,6 +7,7 @@
 #include "pico/stdlib.h" // IWYU pragma: keep
 #include "gpios.h"
 
+#include "../interrupts/interrupts.h"
 
 
 CommonGPIO::CommonGPIO(const int pin, const bool input = true, const bool pullup = true, const bool inverted = false) :
@@ -110,7 +111,28 @@ void Switches::enableInterrupts(const std::vector<int> &swPins) const
     for (std::size_t i = 0; i < swPins.size(); i++) {
         for (const auto &swGpio: this->switches) {
             if (swGpio->getPin() == swPins[i]) {
-                gpio_set_irq_enabled(swPins[i], GPIO_IRQ_EDGE_FALL, true);
+                gpio_set_irq_enabled(swPins[i], GPIO_IRQ_EDGE_FALL | GPIO_IRQ_EDGE_RISE, true);
+            }
+        }
+    }
+}
+
+void Switches::initInterrupts(const std::vector<int> &swPins, const std::vector<bool> &initStates)
+{
+    if (swPins.size() != initStates.size())
+    {
+        std::cerr << "[ERROR] --> Vector sizes don't match" << std::endl;
+        return;
+    }
+
+    for (size_t i = 0; i < swPins.size(); i++)
+    {
+        for (const auto &swGpio : this->switches)
+        {
+            if (swPins[i] == swGpio->getPin())
+            {
+                gpio_set_irq_enabled_with_callback(swPins[i], GPIO_IRQ_EDGE_FALL, initStates[i], &commonIsr);
+                break;
             }
         }
     }

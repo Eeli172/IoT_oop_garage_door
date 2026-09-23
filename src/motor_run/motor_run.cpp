@@ -9,7 +9,7 @@
 
 
 Motor::Motor(const std::vector<int> &coilGpios, bool inverted) :
-doorState(CLOSED),
+currentDoorState(CLOSED),
 stepsToEnd(0),
 step(0)
 {
@@ -38,9 +38,6 @@ bool Motor::runMotor()
     
     gpio_set_irq_enabled(PIN_LMSW_MTR, GPIO_IRQ_EDGE_FALL, true);
     gpio_set_irq_enabled(PIN_LMSW_ENC, GPIO_IRQ_EDGE_FALL, true);
-    flushQueue(&sw1EventQ);
-    flushQueue(&lmswEncEventQ);
-    flushQueue(&lmswMtrEventQ);
     
     while ( ( (direction && !lmswEncStop) || (!direction && !lmswMtrStop) ) && !sw1Stop)
     {        
@@ -58,12 +55,7 @@ bool Motor::runMotor()
     }
     
     this->direction = !this->direction;
-    
-    
-    gpio_set_irq_enabled(PIN_LMSW_MTR, GPIO_IRQ_EDGE_FALL, false);
-    gpio_set_irq_enabled(PIN_LMSW_ENC, GPIO_IRQ_EDGE_FALL, false);
-    
-    flushQueue(&sw1EventQ);
+
     return sw1Stop;
 }
 
@@ -80,14 +72,20 @@ void Motor::calibrateMotor()
     runMotor();
 }
 
-doorState_t Motor::getState() const
+doorState_t Motor::getCurrentState() const
 {
-    return this->doorState;
+    return this->currentDoorState;
+}
+
+doorState_t Motor::getPreviousState() const
+{
+    return this->previousDoorState;
 }
 
 void Motor::setCurrentState(const doorState_t &dir)
 {
-    this->doorState = dir;
+    this->previousDoorState = this->currentDoorState;
+    this->currentDoorState = dir;
 }
 
 void Motor::updateStep(bool opening) {
