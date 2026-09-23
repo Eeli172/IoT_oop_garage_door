@@ -70,7 +70,7 @@ bool Motor::runMotor()
 void Motor::calibrateMotor()
 {
     direction = true;
-    if (!gpio_get(PIN_LMSW_MTR)) // because of this motor doesn't crash into the already pressed switch on start
+    if (!gpio_get(PIN_LMSW_ENC)) // because of this motor doesn't crash into the already pressed switch on start
     {
         runMotor();
     }
