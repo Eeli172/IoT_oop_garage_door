@@ -1,5 +1,4 @@
 #include "encoder.h"
-#include <iostream>
 #include "hardware/gpio.h"
 
 Encoder::Encoder(int pinA, int pinB, bool pullup)

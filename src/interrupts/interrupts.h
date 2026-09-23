@@ -4,14 +4,15 @@
 #include "pico/util/queue.h"
 
 /* EVENT QUEUES */
-extern queue_t sw0EventQ;
 extern queue_t sw1EventQ;
-extern queue_t sw2EventQ;
-extern queue_t lmswEventQ;
+extern queue_t lmswMtrEventQ;
+extern queue_t lmswEncEventQ;
 extern queue_t encEventQ;
 
 /* EVENT FUNCTIONS / CLASSES */
 void commonIsr(uint gpio, uint32_t eventMask);
+void flushQueue(queue_t *queue);
 void initQueues();
+
 
 #endif //IOT_OOP_GARAGE_DOOR_INTERRUPTS_H

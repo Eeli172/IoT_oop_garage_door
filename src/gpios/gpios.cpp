@@ -3,10 +3,8 @@
 #include <iostream>
 
 /* CUSTOM */
-#include "../interrupts/interrupts.h"
 #include "../macros/macros.h"
 #include "pico/stdlib.h" // IWYU pragma: keep
-#include "pico/util/queue.h"
 #include "gpios.h"
 
 
@@ -93,48 +91,6 @@ int CommonGPIO::getPin()
     return this->pin;
 }
 
-bool CommonGPIO::checkFlushQueue() {
-    int dummy;
-
-    switch (this->pin) {
-        case SW0:
-        if (!queue_is_empty(&sw0EventQ)) {
-            while (queue_try_remove(&sw0EventQ, &dummy)) {}
-            return true;
-        }
-        break;
-
-        case SW1:
-        if (!queue_is_empty(&sw1EventQ)) {
-            while (queue_try_remove(&sw1EventQ, &dummy)) {}
-            return true;
-        }
-        break;
-
-        case SW2:
-        if (!queue_is_empty(&sw2EventQ)) {
-            while (queue_try_remove(&sw2EventQ, &dummy)) {}
-            return true;
-        }
-        break;
-
-        case LMSW_1:
-        if (!queue_is_empty(&lmswEventQ)) {
-            while (queue_try_remove(&lmswEventQ, &dummy)) {}
-            return true;
-        }
-
-        case LMSW_2:
-        if (!queue_is_empty(&lmswEventQ)) {
-            while (queue_try_remove(&lmswEventQ, &dummy)) {}
-            return true;
-        }
-        break;
-    }
-
-    return false;
-}
-
 
 // SWITCHES
 Switches::Switches(const std::vector<int> &pins, bool input, bool pullup, bool inverted) {
@@ -143,58 +99,21 @@ Switches::Switches(const std::vector<int> &pins, bool input, bool pullup, bool i
     }
 }
 
-// Vector first value corresponds to SW0, second to SW1 and so on...
-void Switches::firstInitInterrupts(const std::vector<bool> &switchStates) const
-{
-    for (std::size_t i = 0; i < switchStates.size(); i++)
-    {
-        const auto &swPin = this->switches[i]->getPin();
-        gpio_set_irq_enabled_with_callback(swPin, GPIO_IRQ_EDGE_FALL, switchStates[i], &commonIsr);
-    }
-}
-
 // Allows toggling of multiple interrupts of multiple gpios at a time
-void Switches::modifyInterrupts(const std::vector<int> &swPins, const std::vector<bool> &interruptStates) const
+void Switches::enableInterrupts(const std::vector<int> &swPins) const
 {
-    if (swPins.size() != interruptStates.size())
-    {
-        std::cerr << "Parameter vectors not equal [swPins.size() != interruptStates.size()]" << std::endl;
+    if (swPins.size() > SW_AMOUNT){
+        std::cerr << "System does not support over ["<< SW_AMOUNT <<"] per class." << std::endl;
         return;
     }
 
-    if (swPins.size() > MAX_SWITCHES_CLASS)
-    {
-        std::cerr << "System does not support over ["<< MAX_SWITCHES_CLASS <<"] per class." << std::endl;
-        return;
-    }
-
-    for (std::size_t i = 0; i < swPins.size(); i++)
-    {
-        for (const auto &swGpio: this->switches)
-        {
-            if (swGpio->getPin() == swPins[i])
-            {
-                gpio_set_irq_enabled(swPins[i], GPIO_IRQ_EDGE_FALL, interruptStates[i]);
-            }
-        }
-    }
-}
-
-bool Switches::callFlushCheck(const std::vector<int> &checkablePins) const {
-    for (const auto &pin : checkablePins) {
+    for (std::size_t i = 0; i < swPins.size(); i++) {
         for (const auto &swGpio: this->switches) {
-            if (swGpio->getPin() == pin) {
-                if (!swGpio->checkFlushQueue()) return false;
-            }
-
-            else {
-                std::cerr << "[ERROR] --> No corresponding pin found in CommonGPIOs. " << std::endl;
-                return false;
+            if (swGpio->getPin() == swPins[i]) {
+                gpio_set_irq_enabled(swPins[i], GPIO_IRQ_EDGE_FALL, true);
             }
         }
     }
-
-    return true;
 }
 
 // SYSTEM STATUS LEDS

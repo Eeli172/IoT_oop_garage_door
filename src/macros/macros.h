@@ -3,30 +3,35 @@
 
 /* GPIOS */
 // BUTTONS
-#define SW0 9
-#define SW1 8
-#define SW2 7
-#define MAX_SWITCHES_CLASS 3
+#define PIN_SW0 9
+#define PIN_SW1 8
+#define PIN_SW2 7
+#define SW_AMOUNT 3
 
 // LIMIT SWITCHES (GARAGE DOOR)
-#define LMSW_1 16
-#define LMSW_2 17
+#define PIN_LMSW_MTR 16 // MOTOR'S END
+#define PIN_LMSW_ENC 17 // ENCODER'S END
 
 // ENCODERS
-#define ENCODER_A 28
-#define ENCODER_B 27
+#define PIN_ENCODER_A 28
+#define PIN_ENCODER_B 27
 
 // MOTOR COIL GPIOS
-#define COIL_1 2
-#define COIL_2 3
-#define COIL_3 6
-#define COIL_4 13
-#define TOTAL_COILS 4
+#define PIN_COIL_1 2
+#define PIN_COIL_2 3
+#define PIN_COIL_3 6
+#define PIN_COIL_4 13
+#define MTR_COILS 4
+#define MTR_STEPS 8
 
 // LED GPIOS
-#define LED_1 20
-#define LED_2 21
-#define LED_3 22
-#define TOTAL_LEDS 3
+#define PIN_LED_1 20
+#define PIN_LED_2 21
+#define PIN_LED_3 22
+#define LEDS_AMOUNT 3
+
+
+// TIMEOUTS
+#define INTERRUPT_TIMEOUT_MS 200
 
 #endif //BLINK_MACROS_H

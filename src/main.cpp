@@ -1,10 +1,10 @@
 /* HEADERS */
 // STL
+#include <hardware/gpio.h>
 #include <iostream>
 #include <ostream>
-#include <any>
-#include <typeinfo>
 #include <sys/stat.h>
+#include <vector>
 
 // CUSTOM
 #include "sys/sys.h"
@@ -24,21 +24,21 @@ int main()
     sleep_ms(500);
 
     System sys;
+    bool queueDummy;
 
-    const auto stepperMotor = std::make_unique<Motor>(std::vector{COIL_1, COIL_2, COIL_3, COIL_4}, false);
-    const auto userButtons = std::make_unique<Switches>(std::vector{SW0, SW1, SW2}, true, true, true);
-    const auto limitSwitches = std::make_unique<Switches>(std::vector{LMSW_1, LMSW_2}, true, true, true);
-    const auto encoder = std::make_unique<Encoder>(ENCODER_A, ENCODER_B, false);
+    const auto stepperMotor = std::make_unique<Motor>(std::vector{PIN_COIL_1, PIN_COIL_2, PIN_COIL_3, PIN_COIL_4}, false);
+    const auto userButtons = std::make_unique<Switches>(std::vector{PIN_SW0, PIN_SW1, PIN_SW2}, true, true, true);
+    const auto limitSwitches = std::make_unique<Switches>(std::vector{PIN_LMSW_MTR, PIN_LMSW_ENC}, true, true, true);
+    const auto encoder = std::make_unique<Encoder>(PIN_ENCODER_A, PIN_ENCODER_B, false);
 
     initQueues();
     encoder->initInterrupt();
 
-    uint sw0Pressed;
-    uint sw1Pressed;
-    uint sw2Pressed;
+    gpio_set_irq_enabled_with_callback(PIN_LMSW_MTR, GPIO_IRQ_EDGE_FALL, false, &commonIsr);
+    gpio_set_irq_enabled_with_callback(PIN_LMSW_ENC, GPIO_IRQ_EDGE_FALL, false, &commonIsr);
+    gpio_set_irq_enabled_with_callback(PIN_SW1, GPIO_IRQ_EDGE_FALL, false, &commonIsr);
 
-    std::cout << "Boot1" << std::endl;
-    userButtons->firstInitInterrupts({true, false, true});
+    std::cout << "\n B O O T\n" << std::endl;
     while (true)
     {
 
@@ -60,51 +60,65 @@ int main()
         switch (sys.getSysState())
         {
             case PRE_CALIB:
-            if (userButtons->callFlushCheck(std::vector {SW0, SW2})) {
+            if (gpio_get(PIN_SW0) && gpio_get(PIN_SW2)) {
                 sys.setSysState(CALIBRATING);
             }
             break;
 
         case CALIBRATING:
             // [1] Calling class function calibrateMotor
-            limitSwitches->firstInitInterrupts({true, true});
             std::cout << "Calibration start: " << std::endl;
             stepperMotor->calibrateMotor();
             std::cout << "Calibration finished" << std::endl;
-            userButtons->modifyInterrupts(std::vector{SW1}, std::vector{true});
+            gpio_set_irq_enabled(PIN_SW1, GPIO_IRQ_EDGE_FALL, true);
             sys.setSysState(CALIBRATED);
             break;
 
         case CALIBRATED:
             switch (stepperMotor->getState())
             {
-            case CLOSED:
-                if (userButtons->callFlushCheck(std::vector {SW1})) {
-                    printf("CLOSED\n");
+            case CLOSED: 
+                // press sw1 to open
+                if (queue_try_remove(&sw1EventQ, &queueDummy)) {
                     stepperMotor->setCurrentState(OPENING);
-                    sw1Pressed = false;
-                }
-                break;
-
-            case OPENING:
-                userButtons->modifyInterrupts(std::vector{SW1}, std::vector{true});
-                stepperMotor->runMotor(false);
-                stepperMotor->setCurrentState(OPEN);
-                break;
-
-            case OPEN:
-                if (userButtons->callFlushCheck(std::vector {SW1})) {
-                    printf("OPEN\n");
-                    stepperMotor->setCurrentState(CLOSING);
-                    sw1Pressed = false;
                 }
                 break;
     
-            case CLOSING:
-                userButtons->modifyInterrupts(std::vector{SW1}, std::vector{true});
-                stepperMotor->runMotor(true);
-                stepperMotor->setCurrentState(CLOSED);
+            case OPEN:
+                // press sw1 to close
+                if (queue_try_remove(&sw1EventQ, &queueDummy)) {
+                    stepperMotor->setCurrentState(CLOSING);
+                }
                 break;
+                
+            case OPENING:
+                // open until sw1 or limit switch is pressed
+                printf("OPENING\n");
+                if (stepperMotor->runMotor()) {
+                    stepperMotor->setCurrentState(STOPPED);
+                }
+                else stepperMotor->setCurrentState(OPEN);
+                break;
+
+            case CLOSING:
+                // close until sw1 or limit switch is pressed
+                printf("CLOSING\n");
+                if (stepperMotor->runMotor()) {
+                    stepperMotor->setCurrentState(STOPPED);
+                }
+                else stepperMotor->setCurrentState(CLOSED);
+                break;
+
+            case STOPPED: 
+                // press sw1 to continue into the opposite direction
+                flushQueue(&lmswMtrEventQ);
+                if (queue_try_remove(&sw1EventQ, &queueDummy)) {
+                    if (stepperMotor->getDirection()) {
+                        stepperMotor->setCurrentState(OPENING);
+                    }
+                    else stepperMotor->setCurrentState(CLOSING);
+                }
+
             }
         }
     }

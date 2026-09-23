@@ -7,7 +7,7 @@
 /* CUSTOM */
 #include "../gpios/gpios.h"
 
-typedef enum { CLOSING, OPENING, CLOSED, OPEN } doorState_t;
+typedef enum { CLOSING, OPENING, CLOSED, OPEN, STOPPED } doorState_t;
 
 class Motor
 {
@@ -16,16 +16,20 @@ class Motor
     Motor(const Motor &) = delete; // Copy-constructors denied.
     ~Motor() = default;
 
-    void runMotor(bool reverse);
+    bool runMotor();
     void calibrateMotor();
     [[nodiscard]] doorState_t getState() const;
     void setCurrentState(const doorState_t &dir);
+    void updateStep(bool opening);
+    bool getDirection();
 
     private:
     std::vector<std::unique_ptr<CommonGPIO>> motorCoils;
     doorState_t doorState;
     int stepsToEnd;
     static int runInstructionsMatrix[8][4];
+    int step;
+    bool direction; // true = opening, false = closing
 };
 
 

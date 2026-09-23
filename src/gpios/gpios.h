@@ -2,10 +2,8 @@
 #define IOT_OOP_GARAGE_DOOR_GPIOS_H
 
 #include <vector>
-#include <array>
 #include <cstdint>
 #include <memory>
-#include "../macros/macros.h"
 
 class CommonGPIO {
 public:
@@ -16,7 +14,6 @@ public:
     void write(bool value) const;
     bool read() const;
     int getPin();
-    bool checkFlushQueue();
     explicit operator bool() const;
 
 private:
@@ -34,9 +31,7 @@ public:
     Switches(const Switches &) = delete;
     virtual ~Switches() = default;
 
-    void firstInitInterrupts(const std::vector<bool> &switchStates) const;
-    void modifyInterrupts(const std::vector<int> &swPins, const std::vector<bool> &interruptStates) const;
-    bool callFlushCheck(const std::vector<int> &checkablePins) const;
+    void enableInterrupts(const std::vector<int> &swPins) const;
 
 private:
     std::vector<std::unique_ptr<CommonGPIO>> switches;
