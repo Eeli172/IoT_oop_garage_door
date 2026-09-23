@@ -93,6 +93,47 @@ int CommonGPIO::getPin()
     return this->pin;
 }
 
+bool CommonGPIO::checkFlushQueue() {
+    int dummy;
+
+    switch (this->pin) {
+        case SW0:
+        if (!queue_is_empty(&sw0EventQ)) {
+            while (queue_try_remove(&sw0EventQ, &dummy)) {}
+            return true;
+        }
+        break;
+
+        case SW1:
+        if (!queue_is_empty(&sw1EventQ)) {
+            while (queue_try_remove(&sw1EventQ, &dummy)) {}
+            return true;
+        }
+        break;
+
+        case SW2:
+        if (!queue_is_empty(&sw2EventQ)) {
+            while (queue_try_remove(&sw2EventQ, &dummy)) {}
+            return true;
+        }
+        break;
+
+        case LMSW_1:
+        if (!queue_is_empty(&lmswEventQ)) {
+            while (queue_try_remove(&lmswEventQ, &dummy)) {}
+            return true;
+        }
+
+        case LMSW_2:
+        if (!queue_is_empty(&lmswEventQ)) {
+            while (queue_try_remove(&lmswEventQ, &dummy)) {}
+            return true;
+        }
+        break;
+    }
+
+    return false;
+}
 
 
 // SWITCHES
@@ -137,6 +178,23 @@ void Switches::modifyInterrupts(const std::vector<int> &swPins, const std::vecto
             }
         }
     }
+}
+
+bool Switches::callFlushCheck(const std::vector<int> &checkablePins) const {
+    for (const auto &pin : checkablePins) {
+        for (const auto &swGpio: this->switches) {
+            if (swGpio->getPin() == pin) {
+                if (!swGpio->checkFlushQueue()) return false;
+            }
+
+            else {
+                std::cerr << "[ERROR] --> No corresponding pin found in CommonGPIOs. " << std::endl;
+                return false;
+            }
+        }
+    }
+
+    return true;
 }
 
 // SYSTEM STATUS LEDS

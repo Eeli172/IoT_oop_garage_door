@@ -59,9 +59,8 @@ int main()
 
         switch (sys.getSysState())
         {
-        case PRE_CALIB:
-            while (queue_try_remove(&sw0EventQ, &sw0Pressed) && queue_try_remove(&sw2EventQ, &sw2Pressed))
-            {
+            case PRE_CALIB:
+            if (userButtons->callFlushCheck(std::vector {SW0, SW2})) {
                 sys.setSysState(CALIBRATING);
             }
             break;
@@ -77,13 +76,10 @@ int main()
             break;
 
         case CALIBRATED:
-
-            while (queue_try_remove(&sw1EventQ, &sw1Pressed))
-
             switch (stepperMotor->getState())
             {
             case CLOSED:
-                if (sw1Pressed) {
+                if (userButtons->callFlushCheck(std::vector {SW1})) {
                     printf("CLOSED\n");
                     stepperMotor->setCurrentState(OPENING);
                     sw1Pressed = false;
@@ -97,7 +93,7 @@ int main()
                 break;
 
             case OPEN:
-                if (sw1Pressed) {
+                if (userButtons->callFlushCheck(std::vector {SW1})) {
                     printf("OPEN\n");
                     stepperMotor->setCurrentState(CLOSING);
                     sw1Pressed = false;

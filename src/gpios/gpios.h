@@ -16,6 +16,7 @@ public:
     void write(bool value) const;
     bool read() const;
     int getPin();
+    bool checkFlushQueue();
     explicit operator bool() const;
 
 private:
@@ -35,21 +36,13 @@ public:
 
     void firstInitInterrupts(const std::vector<bool> &switchStates) const;
     void modifyInterrupts(const std::vector<int> &swPins, const std::vector<bool> &interruptStates) const;
-    virtual bool checkFlushQueues(std::vector<int> &checkPins);
+    bool callFlushCheck(const std::vector<int> &checkablePins) const;
 
 private:
     std::vector<std::unique_ptr<CommonGPIO>> switches;
 };
 
-class LimitSwitches : public Switches
-{
-    public:
-    LimitSwitches(const std::vector<int> &pins, bool input, bool pullup, bool inverted);
-    LimitSwitches(const LimitSwitches &) = delete;
-    ~LimitSwitches() override = default;
 
-    bool checkFlushQueues(std::vector<int>& checkPins) override;
-};
 
 // LED HUB (GPIO: 20, 21, 22)
 class StatusLeds
