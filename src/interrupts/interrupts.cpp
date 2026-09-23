@@ -16,7 +16,7 @@ void commonIsr(const uint gpio, const uint32_t eventMask)
     if (gpio == PIN_ENCODER_A || gpio == PIN_ENCODER_B) {
         queue_try_add(&encEventQ, &value);
     }
-    
+
     else if (absolute_time_diff_us(previous, get_absolute_time()) > INTERRUPT_TIMEOUT_MS * 1000) {
         
         switch (gpio) {
@@ -35,11 +35,6 @@ void commonIsr(const uint gpio, const uint32_t eventMask)
 
         previous = get_absolute_time();
     }
-}
-
-bool checkQueue(queue_t *queue) {
-    bool value = false;
-    return queue_try_remove(queue, &value);
 }
 
 void flushQueue(queue_t *queue) {
