@@ -25,4 +25,9 @@ stateMachine_t System::getSysState() const
     return this->sysState;
 }
 
+MQTTBroker System::getMqttBroker()
+{
+    return this->mqttBroker;
+}
+
 

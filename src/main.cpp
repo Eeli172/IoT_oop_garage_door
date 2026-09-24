@@ -67,15 +67,18 @@ int main()
         case CALIBRATING:
             // [1] Calling class function calibrateMotor
             std::cout << "Calibration: started" << std::endl;
+            limitSwitches->enableInterrupts(std::vector {PIN_LMSW_MTR, PIN_LMSW_ENC});
             stepperMotor->calibrateMotor();
             std::cout << "Calibration: finished" << std::endl;
-            userButtons->initInterrupts(std::vector {PIN_SW1}, std::vector {true});
+            userButtons->enableInterrupts(std::vector {PIN_SW1});
             sys.setSysState(CALIBRATED);
             break;
 
 
         case CALIBRATED:
+
         stepperMotor->updateStatusLeds();
+
         switch (stepperMotor->getCurrentState())
         {
             case CLOSED: 
@@ -87,29 +90,33 @@ int main()
 
             case IN_BETWEEN:
                 stoppedBySw1 = stepperMotor->runMotor();
-            
+
+                // LOGIIKKA ERRORSTATEN HAKUUN --> MIKÄLI LÖYTYY NIIN Sys.reportMQTT(const status);
+
                 if (stoppedBySw1) // PYSÄYTETTY NAPISTA
                 {
-                    while (!queue_try_remove(&sw1EventQ, &queueDummy)) {
-                        stepperMotor->updateStatusLeds();
-                    }
+                    while (!queue_try_remove(&sw1EventQ, &queueDummy)) {}
                 }
 
                 else if (!stoppedBySw1) // AJOI PÄÄTYYN ASTI
                 {
-                    if (stepperMotor->getPreviousState() == CLOSED) // JOS TULEE VASEMMALTA (OLI SULJETTU)
+                    if (stepperMotor->getPreviousState() == CLOSED && !stepperMotor->getDirection()) // JOS TULEE VASEMMALTA (OLI SULJETTU)
                     {
                         stepperMotor->setCurrentState(OPEN);
+                        // Save_EEPROM()
                     }
 
-                    else if (stepperMotor->getPreviousState() == OPEN) // JOS TULEE OIKEALTA (OLI AUKI)
+                    else if (stepperMotor->getPreviousState() == OPEN && stepperMotor->getDirection()) // JOS TULEE OIKEALTA (OLI AUKI)
                     {
                         stepperMotor->setCurrentState(CLOSED);
+                        // Save_EEPROM()
+                    }
+
+                    else
+                    {
+                        stepperMotor->setCurrentState(stepperMotor->getPreviousState());
                     }
                 }
-
-                else; // PYSÄYTETTY ENCODERIN TOIMESTA / OVI JUMISSA (pitää muokata vielä logiikkaa)
-
                 break;
 
             case OPEN:

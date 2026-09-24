@@ -5,6 +5,7 @@
 
 /* CUSTOM */
 #include "../types/types.h"
+#include "../mqtt/mqtt.h"
 
 /* SYSTEM */
 // STATE MACHINE ENUM
@@ -22,6 +23,7 @@ public:
     void setDoorState(const doorState_t &state);
 
     stateMachine_t getSysState() const;
+    MQTTBroker getMqttBroker();
 
     void saveSystem();
     void loadSystem();
@@ -30,6 +32,7 @@ private:
     stateMachine_t sysState;
     bool calibrationStatus;
     doorState_t doorState;
+    MQTTBroker mqttBroker;
 };
 
 #endif //GARAGE_DOOR_SYS_H

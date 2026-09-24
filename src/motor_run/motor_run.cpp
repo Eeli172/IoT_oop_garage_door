@@ -39,10 +39,7 @@ bool Motor::runMotor()
     bool lmswMtrStop = false;
     bool lmswEncStop = false;
     bool sw1Stop = false;
-    
-    gpio_set_irq_enabled(PIN_LMSW_MTR, GPIO_IRQ_EDGE_FALL, true);
-    gpio_set_irq_enabled(PIN_LMSW_ENC, GPIO_IRQ_EDGE_FALL, true);
-    
+
     while ( ( (direction && !lmswEncStop) || (!direction && !lmswMtrStop) ) && !sw1Stop)
     {        
         for (uint i = 0; i < MTR_COILS; i++)
@@ -53,11 +50,7 @@ bool Motor::runMotor()
         sleep_ms(1);
         updateStep(direction);
 
-        if (calibrated) {
-            updateStatusLeds();
-            queue_try_remove(&sw1EventQ, &sw1Stop);
-        }
-
+        queue_try_remove(&sw1EventQ, &sw1Stop);
         queue_try_remove(&lmswMtrEventQ, &lmswMtrStop);
         queue_try_remove(&lmswEncEventQ, &lmswEncStop);
     }

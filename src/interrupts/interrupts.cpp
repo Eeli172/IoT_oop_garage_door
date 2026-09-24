@@ -31,9 +31,9 @@ void commonIsr(const uint gpio, const uint32_t eventMask)
                     queue_try_add(&lmswMtrEventQ, &value);
                     break;
                     
-                case PIN_SW1:
-                queue_try_add(&sw1EventQ, &value);
-                break;
+                    case PIN_SW1:
+                    queue_try_add(&sw1EventQ, &value);
+                    break;
                 }
             }
         }

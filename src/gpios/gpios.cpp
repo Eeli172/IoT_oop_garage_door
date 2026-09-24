@@ -116,25 +116,3 @@ void Switches::enableInterrupts(const std::vector<int> &swPins) const
         }
     }
 }
-
-void Switches::initInterrupts(const std::vector<int> &swPins, const std::vector<bool> &initStates)
-{
-    if (swPins.size() != initStates.size())
-    {
-        std::cerr << "[ERROR] --> Vector sizes don't match" << std::endl;
-        return;
-    }
-
-    for (size_t i = 0; i < swPins.size(); i++)
-    {
-        for (const auto &swGpio : this->switches)
-        {
-            if (swPins[i] == swGpio->getPin())
-            {
-                gpio_set_irq_enabled_with_callback(swPins[i], GPIO_IRQ_EDGE_FALL | GPIO_IRQ_EDGE_RISE, initStates[i], &commonIsr);
-                break;
-            }
-        }
-    }
-}
-

@@ -32,7 +32,6 @@ public:
     Switches(const Switches &) = delete;
     ~Switches() = default;
 
-    void initInterrupts(const std::vector<int> &swPins, const std::vector<bool> &initStates);
     void enableInterrupts(const std::vector<int> &swPins) const;
 
 private:

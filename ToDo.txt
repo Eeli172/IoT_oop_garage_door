@@ -4,3 +4,6 @@ MQTT
 
 WIFI
 
+Motor
+Oven ollessa joko Open tai Closed, osuessa vastapuolen limit switchiin niin ovi seuraavaksi nappia painaessa
+yrittää ajaa itsensä limit switchin bodyn läpi (jossa siis sillä hetkellä kiinni)
