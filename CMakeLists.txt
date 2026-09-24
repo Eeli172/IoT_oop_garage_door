@@ -46,14 +46,8 @@ target_link_libraries(${PROJECT_NAME}
         hardware_gpio
         hardware_uart
         hardware_i2c
-        pico_cyw43_arch_lwip_threadsafe_background
 )
 
 # Disable usb output, enable uart output
 pico_enable_stdio_usb(${PROJECT_NAME} 0)
 pico_enable_stdio_uart(${PROJECT_NAME} 1)
-
-target_include_directories(${PROJECT_NAME} PRIVATE
-        ${PICO_SDK_PATH}/../pico-examples/pico_w/wifi/wifi_scan
-        ${PICO_SDK_PATH}/../pico-examples/pico_w/wifi
-)
