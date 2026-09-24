@@ -1,4 +1,4 @@
-#include "wifi.h"
+/*#include "wifi.h"
 #include "wifi_config.h"
 #include "pico/cyw43_arch.h"
 
@@ -49,4 +49,4 @@ int WIFI::connectWifi() {
 
     return 0 ;
 
-}
+}*/
