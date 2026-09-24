@@ -27,9 +27,10 @@ add_executable(${PROJECT_NAME}
         src/main.cpp
         src/interrupts/interrupts.cpp
         src/gpios/gpios.cpp
+        src/gpios/encoder/encoder.cpp
+        src/gpios/leds/leds.cpp
         src/motor_run/motor_run.cpp
         src/mqtt/mqtt.cpp
-        src/gpios/encoder/encoder.cpp
         src/sys/sys.cpp
 )
 

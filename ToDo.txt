@@ -1,0 +1,6 @@
+Rotary encoder
+
+MQTT
+
+WIFI
+

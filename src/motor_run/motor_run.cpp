@@ -3,6 +3,7 @@
 
 #include "../interrupts/interrupts.h"
 #include "../macros/macros.h"
+#include "../gpios/leds/leds.h"
 #include "pico/util/queue.h"
 #include "hardware/gpio.h"
 
@@ -12,7 +13,9 @@ Motor::Motor(const std::vector<int> &coilGpios, bool inverted) :
 currentDoorState(CLOSED),
 stepsToEnd(0),
 step(0),
-direction(true)
+direction(true),
+errorState(false), 
+calibrated(false)
 {
     for (const auto &coilPin : coilGpios)
     {
@@ -50,9 +53,13 @@ bool Motor::runMotor()
         sleep_ms(1);
         updateStep(direction);
 
+        if (calibrated) {
+            updateStatusLeds();
+            queue_try_remove(&sw1EventQ, &sw1Stop);
+        }
+
         queue_try_remove(&lmswMtrEventQ, &lmswMtrStop);
         queue_try_remove(&lmswEncEventQ, &lmswEncStop);
-        queue_try_remove(&sw1EventQ, &sw1Stop);
     }
     
     this->direction = !this->direction;
@@ -70,6 +77,9 @@ void Motor::calibrateMotor()
 
     sleep_ms(100);
     runMotor();
+
+    this->calibrated = true;
+    this->errorState = false;
 }
 
 doorState_t Motor::getCurrentState() const
@@ -86,6 +96,7 @@ void Motor::setCurrentState(const doorState_t &dir)
 {
     this->previousDoorState = this->currentDoorState;
     this->currentDoorState = dir;
+    //this->updateStatusLeds();
 }
 
 void Motor::updateStep(bool opening) {
@@ -101,4 +112,19 @@ void Motor::updateStep(bool opening) {
 
 bool Motor::getDirection() {
     return direction;
+}
+
+bool Motor::getErrorState() {
+    return this->errorState;
+}
+
+void Motor::createStatusLeds() {
+    this->statusLeds = std::make_shared<StatusLeds>(
+        std::vector{PIN_LED_1, PIN_LED_2, PIN_LED_3}, 
+        weak_from_this()
+    );
+}
+
+void Motor::updateStatusLeds() {
+    this->statusLeds->updateCall();
 }

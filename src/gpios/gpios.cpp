@@ -96,7 +96,7 @@ int CommonGPIO::getPin()
 // SWITCHES
 Switches::Switches(const std::vector<int> &pins, bool input, bool pullup, bool inverted) {
     for (const auto &pin : pins) {
-        switches.push_back(std::make_unique<CommonGPIO>(pin, input, pullup, inverted));
+        switches.emplace_back(std::make_unique<CommonGPIO>(pin, input, pullup, inverted));
     }
 }
 
@@ -137,28 +137,4 @@ void Switches::initInterrupts(const std::vector<int> &swPins, const std::vector<
         }
     }
 }
-
-// SYSTEM STATUS LEDS
-StatusLeds::StatusLeds(const std::vector<int> &ledGpios, bool inverted)
-{
-    for (const auto &ledGpio: ledGpios)
-    {
-        this->ledGpios.push_back(std::make_unique<CommonGPIO>(ledGpio, inverted));
-    }
-}
-
-// Function to toggle led ON/OFF
-void StatusLeds::writeLed (const int ledGpio) const
-{
-    for (const auto &pin : this->ledGpios)
-    {
-        if (pin->getPin() == ledGpio)
-        {
-            pin->write(!pin->read());
-            break;
-        }
-    }
-}
-
-
 

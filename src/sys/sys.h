@@ -4,11 +4,10 @@
 /* STL */
 
 /* CUSTOM */
-#include "../motor_run/motor_run.h"
+#include "../types/types.h"
 
 /* SYSTEM */
 // STATE MACHINE ENUM
-typedef enum { PRE_CALIB, CALIBRATING, CALIBRATED } stateMachine_t;
 
 // SYSTEM MAIN CLASS
 class System

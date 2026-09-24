@@ -22,23 +22,24 @@ int main()
 {
     stdio_init_all();
     sleep_ms(500);
-
+    
     System sys;
     bool queueDummy;
-
-    const auto stepperMotor = std::make_unique<Motor>(std::vector{PIN_COIL_1, PIN_COIL_2, PIN_COIL_3, PIN_COIL_4}, false);
+    bool stoppedBySw1;
+    
+    const auto stepperMotor = std::make_shared<Motor>(std::vector{PIN_COIL_1, PIN_COIL_2, PIN_COIL_3, PIN_COIL_4}, false);
     const auto userButtons = std::make_unique<Switches>(std::vector{PIN_SW0, PIN_SW1, PIN_SW2}, true, true, true);
     const auto limitSwitches = std::make_unique<Switches>(std::vector{PIN_LMSW_MTR, PIN_LMSW_ENC}, true, true, true);
     const auto encoder = std::make_unique<Encoder>(PIN_ENCODER_A, PIN_ENCODER_B, false);
-
+    
     initQueues();
     encoder->initInterrupt();
-
+    
+    stepperMotor->createStatusLeds();
 
     std::cout << "\n B O O T\n" << std::endl;
     while (true)
     {
-
         /* Encoder in main
         while (queue_try_remove(&encEventQ, &queueInput))
         {
@@ -74,17 +75,27 @@ int main()
 
 
         case CALIBRATED:
-            switch (stepperMotor->getCurrentState())
-            {
+        stepperMotor->updateStatusLeds();
+        switch (stepperMotor->getCurrentState())
+        {
             case CLOSED: 
-                // press sw1 to open
+            // press sw1 to open
                 if (queue_try_remove(&sw1EventQ, &queueDummy)) {
                     stepperMotor->setCurrentState(IN_BETWEEN); // PREVIOUS-STATE = CLOSED, CURRENT_STATE = IN_BETWEEN
                 }
                 break;
 
             case IN_BETWEEN:
-                if (!stepperMotor->runMotor()) // AJAA PÄÄTYYN ASTI
+                stoppedBySw1 = stepperMotor->runMotor();
+            
+                if (stoppedBySw1) // PYSÄYTETTY NAPISTA
+                {
+                    while (!queue_try_remove(&sw1EventQ, &queueDummy)) {
+                        stepperMotor->updateStatusLeds();
+                    }
+                }
+
+                else if (!stoppedBySw1) // AJOI PÄÄTYYN ASTI
                 {
                     if (stepperMotor->getPreviousState() == CLOSED) // JOS TULEE VASEMMALTA (OLI SULJETTU)
                     {
@@ -95,11 +106,10 @@ int main()
                     {
                         stepperMotor->setCurrentState(CLOSED);
                     }
-                } 
-                else
-                {
-                    while (!queue_try_remove(&sw1EventQ, &queueDummy)) {}
                 }
+
+                else; // PYSÄYTETTY ENCODERIN TOIMESTA / OVI JUMISSA (pitää muokata vielä logiikkaa)
+
                 break;
 
             case OPEN:
