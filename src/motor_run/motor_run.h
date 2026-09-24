@@ -33,6 +33,7 @@ class Motor : public std::enable_shared_from_this<Motor>
 
     private:
     std::vector<std::unique_ptr<CommonGPIO>> motorCoils;
+    std::shared_ptr<Switches> encoder;
     std::shared_ptr<StatusLeds> statusLeds;
 
     doorState_t currentDoorState;
