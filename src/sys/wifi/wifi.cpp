@@ -1,6 +1,52 @@
 #include "wifi.h"
 #include "wifi_config.h"
+#include "pico/cyw43_arch.h"
 
 
 
-WIFI::WIFI() : ssidd(WIFI_SSID), password(WIFI_PASSWORD) {}
+WIFI::WIFI() : ssid(WIFI_SSID), password(WIFI_PASSWORD) {}
+
+bool WIFI::init() {
+    printf("wifi init: ");
+    if (cyw43_arch_init()) {
+        printf("FAILED\n");
+        return false;
+    } else {
+        printf("SUCCEED"); 
+        return true;
+    }
+}
+
+int WIFI::connectWifi() {
+
+    // Initialize the hardware
+    if (cyw43_arch_init_with_country(CYW43_COUNTRY_FINLAND)) {
+        printf("Failed to initialize hardware.\n") ;
+        return 1 ;
+    }
+
+    // Make sure the LED is off
+    cyw43_arch_gpio_put(CYW43_WL_GPIO_LED_PIN, 0) ;
+
+    // Put the device into station mode
+    cyw43_arch_enable_sta_mode() ;
+
+    // Print a status message
+    printf("Attempting connection . . . \n") ;
+
+    // Connect to the network
+    if (cyw43_arch_wifi_connect_blocking(this->ssid, this->password, CYW43_AUTH_WPA3_SAE_AES_PSK)) {
+        return 2 ;
+    }
+
+    // Use the LED to indicate connection success
+    cyw43_arch_gpio_put(CYW43_WL_GPIO_LED_PIN, 1) ;
+
+    // Report the IP, netmask, and gateway that we've been assigned
+    printf("IP: %s\n", ip4addr_ntoa(netif_ip_addr4(netif_default))) ;
+    printf("Mask: %s\n", ip4addr_ntoa(netif_ip_netmask4(netif_default))) ;
+    printf("Gateway: %s\n", ip4addr_ntoa(netif_ip_gw4(netif_default))) ;
+
+    return 0 ;
+
+}
