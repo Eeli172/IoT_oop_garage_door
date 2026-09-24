@@ -5,7 +5,7 @@
 
 /* CUSTOM */
 #include "../types/types.h"
-#include "../mqtt/mqtt.h"
+#include "mqtt/mqtt.h"
 
 /* SYSTEM */
 // STATE MACHINE ENUM
