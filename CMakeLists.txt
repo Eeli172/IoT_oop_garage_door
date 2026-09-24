@@ -25,13 +25,14 @@ add_compile_options(-Wall
 # Tell CMake where to find the executable source file
 add_executable(${PROJECT_NAME}
         src/main.cpp
-        src/interrupts/interrupts.cpp
         src/gpios/gpios.cpp
         src/gpios/encoder/encoder.cpp
         src/gpios/leds/leds.cpp
-        src/motor_run/motor_run.cpp
-        src/mqtt/mqtt.cpp
         src/sys/sys.cpp
+        src/sys/mqtt/mqtt.cpp
+        src/sys/wifi/wifi.cpp
+        src/motor_run/motor_run.cpp
+        src/interrupts/interrupts.cpp
 )
 
 # Create map/bin/hex/uf2 files

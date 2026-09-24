@@ -7,7 +7,6 @@
 #include "pico/stdlib.h" // IWYU pragma: keep
 #include "gpios.h"
 
-#include "../interrupts/interrupts.h"
 
 
 CommonGPIO::CommonGPIO(const int pin, const bool input = true, const bool pullup = true, const bool inverted = false) :
