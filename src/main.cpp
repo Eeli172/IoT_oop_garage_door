@@ -22,43 +22,30 @@ int main()
 {
     stdio_init_all();
     sleep_ms(500);
-    
+
     System sys;
     bool queueDummy;
     bool stoppedBySw1;
-    
-    const auto stepperMotor = std::make_shared<Motor>(std::vector{PIN_COIL_1, PIN_COIL_2, PIN_COIL_3, PIN_COIL_4}, false);
+
+    const auto stepperMotor = std::make_shared<Motor>(std::vector{PIN_COIL_1, PIN_COIL_2, PIN_COIL_3, PIN_COIL_4},
+                                                      false);
     const auto userButtons = std::make_unique<Switches>(std::vector{PIN_SW0, PIN_SW1, PIN_SW2}, true, true, true);
     const auto limitSwitches = std::make_unique<Switches>(std::vector{PIN_LMSW_MTR, PIN_LMSW_ENC}, true, true, true);
     const auto encoder = std::make_unique<Encoder>(PIN_ENCODER_A, PIN_ENCODER_B, false);
-    
+
     initQueues();
-    encoder->initInterrupt();
-    
+    encoder->enableInterrupts();
+
     stepperMotor->createStatusLeds();
 
-    std::cout << "\n B O O T\n" << std::endl;
+    std::cout << "\n BOOT\n" << std::endl;
     while (true)
     {
-        /* Encoder in main
-        while (queue_try_remove(&encEventQ, &queueInput))
-        {
-            if (const EncoderState dir = encoder->checkDirection(); dir == EncoderState::Clockwise)
-            {
-                std::cout << "Encoder: Clockwise" << std::endl;
-            }
-            else if (dir == EncoderState::CounterClockwise)
-            {
-                std::cout << "Encoder: Counter-clockwise" << std::endl;
-            }
-            // INTERRUPTEJA EI ENÄÄN EKAN KERRAN JÄLKEEN TAPAHDU --> TEE ENCODER LUOKKAAN modifyInterurpts funktion.
-
-        } */
-
         switch (sys.getSysState())
         {
-            case PRE_CALIB:
-            if (gpio_get(PIN_SW0) && gpio_get(PIN_SW2)) {
+        case PRE_CALIB:
+            if (gpio_get(PIN_SW0) && gpio_get(PIN_SW2))
+            {
                 sys.setSysState(CALIBRATING);
             }
             break;
@@ -67,61 +54,75 @@ int main()
         case CALIBRATING:
             // [1] Calling class function calibrateMotor
             std::cout << "Calibration: started" << std::endl;
-            limitSwitches->enableInterrupts(std::vector {PIN_LMSW_MTR, PIN_LMSW_ENC});
-            stepperMotor->calibrateMotor();
+            limitSwitches->enableInterrupts(std::vector{PIN_LMSW_MTR, PIN_LMSW_ENC});
+            stepperMotor->calibrateMotor(*encoder);
             std::cout << "Calibration: finished" << std::endl;
-            userButtons->enableInterrupts(std::vector {PIN_SW1});
+            userButtons->enableInterrupts(std::vector{PIN_SW1});
             sys.setSysState(CALIBRATED);
             break;
 
 
         case CALIBRATED:
 
-        stepperMotor->updateStatusLeds();
+            stepperMotor->updateStatusLeds();
 
-        switch (stepperMotor->getCurrentState())
-        {
-            case CLOSED: 
-            // press sw1 to open
-                if (queue_try_remove(&sw1EventQ, &queueDummy)) {
+            switch (stepperMotor->getCurrentState())
+            {
+            case CLOSED:
+                // press sw1 to open
+                if (queue_try_remove(&sw1EventQ, &queueDummy))
+                {
                     stepperMotor->setCurrentState(IN_BETWEEN); // PREVIOUS-STATE = CLOSED, CURRENT_STATE = IN_BETWEEN
                 }
                 break;
 
             case IN_BETWEEN:
-                stoppedBySw1 = stepperMotor->runMotor();
 
-                // LOGIIKKA ERRORSTATEN HAKUUN --> MIKÄLI LÖYTYY NIIN Sys.reportMQTT(const status);
 
-                if (stoppedBySw1) // PYSÄYTETTY NAPISTA
+                if (stepperMotor->isDoorStuck())
                 {
-                    while (!queue_try_remove(&sw1EventQ, &queueDummy)) {}
+                    if (queue_try_remove(&sw1EventQ, &queueDummy))
+                    {
+                        stepperMotor->clearDoorStuck();
+                        stepperMotor->reverseDirection();
+                    }
+
+                    break;
                 }
 
-                else if (!stoppedBySw1) // AJOI PÄÄTYYN ASTI
+                stoppedBySw1 = stepperMotor->runMotor(*encoder);
+
+                if (stoppedBySw1)
                 {
-                    if (stepperMotor->getPreviousState() == CLOSED && !stepperMotor->getDirection()) // JOS TULEE VASEMMALTA (OLI SULJETTU)
+                    while (!queue_try_remove(&sw1EventQ, &queueDummy))
+                    {
+                    }
+                }
+                else
+                {
+                    if (stepperMotor->getPreviousState() == CLOSED &&
+                        !stepperMotor->getDirection())
                     {
                         stepperMotor->setCurrentState(OPEN);
-                        // Save_EEPROM()
                     }
-
-                    else if (stepperMotor->getPreviousState() == OPEN && stepperMotor->getDirection()) // JOS TULEE OIKEALTA (OLI AUKI)
+                    else if (stepperMotor->getPreviousState() == OPEN &&
+                        stepperMotor->getDirection())
                     {
                         stepperMotor->setCurrentState(CLOSED);
-                        // Save_EEPROM()
                     }
-
                     else
                     {
-                        stepperMotor->setCurrentState(stepperMotor->getPreviousState());
+                        stepperMotor->setCurrentState(
+                            stepperMotor->getPreviousState());
                     }
                 }
+
                 break;
 
             case OPEN:
                 // press sw1 to close
-                if (queue_try_remove(&sw1EventQ, &queueDummy)) {
+                if (queue_try_remove(&sw1EventQ, &queueDummy))
+                {
                     stepperMotor->setCurrentState(IN_BETWEEN); // PREVIOUS-STATE = OPEN, CURRENT_STATE = IN_BETWEEN
                 }
                 break;

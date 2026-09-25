@@ -13,11 +13,12 @@ void commonIsr(const uint gpio, const uint32_t eventMask)
     static constexpr bool value = true;
     static absolute_time_t previous;
 
-    if (gpio == PIN_ENCODER_A || gpio == PIN_ENCODER_B) {
+    if (gpio == PIN_ENCODER_A)
+    {
         queue_try_add(&encEventQ, &value);
+        return;
     }
-    else {
-        
+
         if (absolute_time_diff_us(previous, get_absolute_time()) > INTERRUPT_TIMEOUT_MS * 1000) {
             if (eventMask == GPIO_IRQ_EDGE_FALL)
             {
@@ -39,12 +40,12 @@ void commonIsr(const uint gpio, const uint32_t eventMask)
         }
     previous = get_absolute_time();
     }
-}
+
 
 void initQueues()
 {
     queue_init(&sw1EventQ, sizeof(bool), 10);
     queue_init(&lmswMtrEventQ, sizeof(bool), 10);
     queue_init(&lmswEncEventQ, sizeof(bool), 10);
-    queue_init(&encEventQ, sizeof(bool), 10);
+    queue_init(&encEventQ, sizeof(bool), 100);
 }
