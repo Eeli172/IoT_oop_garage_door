@@ -1,6 +1,19 @@
 #ifndef BLINK_MACROS_H
 #define BLINK_MACROS_H
 
+
+// TIMEOUTS
+#define INTERRUPT_TIMEOUT_MS 20
+#define LED_BLINK_TIMEOUT_MS 500
+
+// MQTT
+#define MQTT_BROKER_PORT 1883
+#define MQTT_CLIENT_ID "RP2040"
+#define MQTT_CLIENT_KA_TIME 60
+#define MQTT_DEFAULT_TOPIC "garage_door/status"
+#define MQTT_DEFAULT_MSG "<Initialization complete>"
+
+
 /* GPIOS */
 // BUTTONS
 #define PIN_SW0 9
@@ -30,9 +43,6 @@
 #define PIN_LED_3 22
 #define LEDS_AMOUNT 3
 
-
-// TIMEOUTS
-#define INTERRUPT_TIMEOUT_MS 20
-#define LED_BLINK_TIMEOUT_MS 500
+#define WIFI_CONNECTING_TIMEOUT_MS 5000
 
 #endif //BLINK_MACROS_H

@@ -1,5 +1,6 @@
 #include "wifi.h"
-#include "../config.h"
+#include "../../macros/macros.h"
+#include "../credentials_template.h"
 #include "pico/cyw43_arch.h"
 
 

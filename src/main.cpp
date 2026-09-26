@@ -4,10 +4,11 @@
 #include <iostream>
 #include <ostream>
 #include <sys/stat.h>
+#include <memory>
 #include <vector>
 
 // CUSTOM
-#include "sys/sys.h"
+#include "system/sys.h"
 #include "gpios/gpios.h"
 #include "interrupts/interrupts.h"
 #include "motor_run/motor_run.h"
@@ -29,10 +30,18 @@ int main()
     bool queueDummy;
     bool stoppedBySw1;
 
-    const auto stepperMotor = std::make_shared<Motor>(std::vector{PIN_COIL_1, PIN_COIL_2, PIN_COIL_3, PIN_COIL_4},false);
-    const auto userButtons = std::make_unique<Switches>(std::vector{PIN_SW0, PIN_SW1, PIN_SW2}, true, true, true);
-    const auto limitSwitches = std::make_unique<Switches>(std::vector{PIN_LMSW_MTR, PIN_LMSW_ENC}, true, true, true);
-    const auto encoder = std::make_unique<Encoder>(PIN_ENCODER_A, PIN_ENCODER_B, false);
+    const auto stepperMotor = std::make_shared<Motor>(
+        std::vector{PIN_COIL_1, PIN_COIL_2, PIN_COIL_3, PIN_COIL_4}, false
+    );
+    const auto userButtons = std::make_unique<Switches>(
+        std::vector{PIN_SW0, PIN_SW1, PIN_SW2}, true, true, true
+    );
+    const auto limitSwitches = std::make_unique<Switches>(
+        std::vector{PIN_LMSW_MTR, PIN_LMSW_ENC}, true, true, true
+    );
+    const auto encoder = std::make_unique<Encoder>(
+        PIN_ENCODER_A, PIN_ENCODER_B, false
+    );
 
     initQueues();
     encoder->enableInterrupts();

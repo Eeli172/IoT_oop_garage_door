@@ -6,4 +6,4 @@ build
 .cache
 *.sh
 .env
-config.h
+personal_config.h

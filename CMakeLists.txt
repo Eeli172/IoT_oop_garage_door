@@ -22,9 +22,9 @@ add_executable(${PROJECT_NAME}
         src/gpios/gpios.cpp
         src/gpios/encoder/encoder.cpp
         src/gpios/leds/leds.cpp
-        src/sys/sys.cpp
-        src/sys/mqtt/mqtt.cpp
-        src/sys/mqtt/wifi/wifi.cpp
+        src/system/sys.cpp
+        src/system/mqtt/mqtt.cpp
+        src/system/wifi/wifi.cpp
         src/motor_run/motor_run.cpp
         src/interrupts/interrupts.cpp
 )
@@ -33,7 +33,7 @@ pico_add_extra_outputs(${PROJECT_NAME})
 
 target_include_directories(${PROJECT_NAME} PRIVATE
         src
-        src/sys/mqtt
+        src/system/mqtt
 )
 
 target_link_libraries(${PROJECT_NAME} PRIVATE

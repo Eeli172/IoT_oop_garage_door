@@ -1,8 +1,7 @@
 #ifndef IOT_OOP_GARAGE_DOOR_MQTT_H
 #define IOT_OOP_GARAGE_DOOR_MQTT_H
 
-#include "lwip/apps/mqtt.h"
-#include "wifi/wifi.h"
+#include "../wifi/wifi.h"
 #include "types/types.h"
 #include <string>
 
@@ -37,13 +36,6 @@ class MQTTManager
     /* MQTT ATTRIBUTES */
     bool mqttEnabled;
 
-    typedef struct
-    {
-        mqtt_client_t *mqtt_client;
-        ip_addr_t broker_ip;
-        u_int16_t mqttPort;
-        mqtt_connect_client_info_t ci;
-    } mqtt_information;
     mqtt_information mqttInfo;
 
     // DATA
