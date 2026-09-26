@@ -7,7 +7,7 @@ class WIFI
 public:
     WIFI();
     bool init();
-    int connectWifi();
+    bool connectWifi();
 
 private:
     const char *ssid;

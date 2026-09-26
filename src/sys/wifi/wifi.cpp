@@ -1,4 +1,4 @@
-/*#include "wifi.h"
+#include "wifi.h"
 #include "wifi_config.h"
 #include "pico/cyw43_arch.h"
 
@@ -17,12 +17,12 @@ bool WIFI::init() {
     }
 }
 
-int WIFI::connectWifi() {
+bool WIFI::connectWifi() {
 
     // Initialize the hardware
     if (cyw43_arch_init_with_country(CYW43_COUNTRY_FINLAND)) {
         printf("Failed to initialize hardware.\n") ;
-        return 1 ;
+        return false;
     }
 
     // Make sure the LED is off
@@ -36,7 +36,7 @@ int WIFI::connectWifi() {
 
     // Connect to the network
     if (cyw43_arch_wifi_connect_blocking(this->ssid, this->password, CYW43_AUTH_WPA3_SAE_AES_PSK)) {
-        return 2 ;
+       return false;
     }
 
     // Use the LED to indicate connection success
@@ -47,6 +47,6 @@ int WIFI::connectWifi() {
     printf("Mask: %s\n", ip4addr_ntoa(netif_ip_netmask4(netif_default))) ;
     printf("Gateway: %s\n", ip4addr_ntoa(netif_ip_gw4(netif_default))) ;
 
-    return 0 ;
+    return true ;
 
-}*/
+}

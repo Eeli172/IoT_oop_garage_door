@@ -23,8 +23,10 @@ public:
     void setDoorState(const doorState_t &state);
 
     stateMachine_t getSysState() const;
-    MQTTBroker getMqttBroker();
 
+    // WIFI + MQTT
+
+    // EEPROM
     void saveSystem();
     void loadSystem();
 
@@ -32,7 +34,7 @@ private:
     stateMachine_t sysState;
     bool calibrationStatus;
     doorState_t doorState;
-    MQTTBroker mqttBroker;
+    MQTTManager mqttBroker;
 };
 
 #endif //GARAGE_DOOR_SYS_H
