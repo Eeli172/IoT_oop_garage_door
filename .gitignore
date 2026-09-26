@@ -6,4 +6,4 @@ build
 .cache
 *.sh
 .env
-wifi_config.h
+config.h

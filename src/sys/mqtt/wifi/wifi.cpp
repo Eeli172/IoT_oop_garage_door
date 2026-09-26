@@ -9,9 +9,8 @@ WIFI::WIFI() : ssid(WIFI_SSID), password(WIFI_PASSWORD) {}
 bool WIFI::init() {
     if (cyw43_arch_init_with_country(CYW43_COUNTRY_FINLAND)) {
         return false;
-    } else {
-        return true;
     }
+    return true;
 }
 
 bool WIFI::connectWifi() {
@@ -20,13 +19,13 @@ bool WIFI::connectWifi() {
     cyw43_arch_gpio_put(CYW43_WL_GPIO_LED_PIN, 0) ;
 
     // Put the device into station mode
-    cyw43_arch_enable_sta_mode() ;
+    cyw43_arch_enable_sta_mode();
 
     // Print a status message
     printf("Attempting connection . . . \n") ;
 
     // Connect to the network
-    if (cyw43_arch_wifi_connect_blocking(this->ssid, this->password, CYW43_AUTH_WPA2_MIXED_PSK)) {
+    if (cyw43_arch_wifi_connect_timeout_ms(this->ssid, this->password, CYW43_AUTH_WPA2_MIXED_PSK, WIFI_CONNECTING_TIMEOUT_MS)) {
        return false;
     }
 

@@ -1,6 +1,8 @@
 Rotary encoder
 
 MQTT
+tilausten hallitsemiseksi aina vaan yksi topic tilauksessa (eli kun tilataan uusi niin vanha / aikaisempi)
+unsubscribetaan (tätä varten tehty jo muuttuja previousTopic)
 
 WIFI
 
