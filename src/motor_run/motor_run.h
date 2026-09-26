@@ -15,10 +15,7 @@ class Motor : public std::enable_shared_from_this<Motor>
 public:
     struct MovementCalibration
     {
-        int motorStepsOpening;
-        int encoderStepsOpening;
-        int motorStepsClosing;
-        int encoderStepsClosing;
+        float motorStepsPerEncoder;
         bool valid;
     };
 
@@ -46,6 +43,7 @@ public:
 
     void clearDoorStuck();
     void reverseDirection();
+    bool moveAwayFromLimit();
 
 private:
     void stopMotor();

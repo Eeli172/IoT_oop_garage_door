@@ -11,7 +11,7 @@ queue_t encEventQ;
 void commonIsr(const uint gpio, const uint32_t eventMask)
 {
     static constexpr bool value = true;
-    static absolute_time_t previous;
+    static absolute_time_t debounceTimers[30] = {}; // One per GPIO pin
 
     if (gpio == PIN_ENCODER_A)
     {
@@ -19,26 +19,29 @@ void commonIsr(const uint gpio, const uint32_t eventMask)
         return;
     }
 
-        if (absolute_time_diff_us(previous, get_absolute_time()) > INTERRUPT_TIMEOUT_MS * 1000) {
-            if (eventMask == GPIO_IRQ_EDGE_FALL)
+    if (eventMask == GPIO_IRQ_EDGE_FALL)
+    {
+        // Check debounce for this specific pin
+        if (absolute_time_diff_us(debounceTimers[gpio], get_absolute_time()) > INTERRUPT_TIMEOUT_MS * 1000)
+        {
+            switch (gpio)
             {
-                switch (gpio)
-                {
-                    case PIN_LMSW_ENC:
+                case PIN_LMSW_ENC:
                     queue_try_add(&lmswEncEventQ, &value);
                     break;
 
-                    case PIN_LMSW_MTR:
+                case PIN_LMSW_MTR:
                     queue_try_add(&lmswMtrEventQ, &value);
                     break;
-                    
-                    case PIN_SW1:
+
+                case PIN_SW1:
                     queue_try_add(&sw1EventQ, &value);
                     break;
-                }
             }
+
+            debounceTimers[gpio] = get_absolute_time(); // Update only this pin's timer
         }
-    previous = get_absolute_time();
+    }
     }
 
 

@@ -29,8 +29,7 @@ int main()
     bool queueDummy;
     bool stoppedBySw1;
 
-    const auto stepperMotor = std::make_shared<Motor>(std::vector{PIN_COIL_1, PIN_COIL_2, PIN_COIL_3, PIN_COIL_4},
-                                                      false);
+    const auto stepperMotor = std::make_shared<Motor>(std::vector{PIN_COIL_1, PIN_COIL_2, PIN_COIL_3, PIN_COIL_4},false);
     const auto userButtons = std::make_unique<Switches>(std::vector{PIN_SW0, PIN_SW1, PIN_SW2}, true, true, true);
     const auto limitSwitches = std::make_unique<Switches>(std::vector{PIN_LMSW_MTR, PIN_LMSW_ENC}, true, true, true);
     const auto encoder = std::make_unique<Encoder>(PIN_ENCODER_A, PIN_ENCODER_B, false);
@@ -79,19 +78,31 @@ int main()
 
             case IN_BETWEEN:
 
-
                 if (stepperMotor->isDoorStuck())
                 {
                     if (queue_try_remove(&sw1EventQ, &queueDummy))
                     {
                         stepperMotor->clearDoorStuck();
-                        stepperMotor->reverseDirection();
-                    }
 
-                    break;
+                        // Leave an active limit, otherwise reverse normally.
+                        if (!stepperMotor->moveAwayFromLimit())
+                        {
+                            stepperMotor->reverseDirection();
+                        }
+                    }
+                    else
+                    {
+                        break;
+                    }
                 }
 
                 stoppedBySw1 = stepperMotor->runMotor(*encoder);
+
+
+                if (stepperMotor->isDoorStuck())
+                {
+                    break;
+                }
 
                 if (stoppedBySw1)
                 {

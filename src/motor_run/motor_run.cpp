@@ -19,9 +19,10 @@ Motor::Motor(const std::vector<int>& coilGpios, bool inverted) :
     calibrated(false),
     motorStepCounter(0),
     stuckCheck{0, 0},
-    movementCalibration{0, 0, 0, 0, false},
+    movementCalibration{0.0f, false},
     doorStuck(false)
 {
+    // Create GPIO objects for the motor coils.
     for (const auto& coilPin : coilGpios)
         motorCoils.push_back(std::make_unique<CommonGPIO>(
             coilPin, false, false, inverted));
@@ -41,6 +42,7 @@ int Motor::runInstructionsMatrix[8][4] =
 
 bool Motor::runMotor(Encoder& encoder)
 {
+    // Local flags used to stop the motor.
     bool lmswMtrStop = false;
     bool lmswEncStop = false;
     bool sw1Stop = false;
@@ -48,8 +50,11 @@ bool Motor::runMotor(Encoder& encoder)
     motorStepCounter = 0;
     doorStuck = false;
 
-    const bool stuckDetectionEnabled =
-        calibrated && currentDoorState == IN_BETWEEN;
+    // Choose a direction away from an already pressed limit switch.
+    // Correct direction when starting on an active limit switch.
+
+    // Enable stuck detection for calibrated movements.
+    const bool stuckDetectionEnabled = calibrated;
 
     resetStuckCheck(encoder);
 
@@ -64,6 +69,7 @@ bool Motor::runMotor(Encoder& encoder)
     while (((direction && !lmswEncStop) ||
         (!direction && !lmswMtrStop)) && !sw1Stop)
     {
+        // Apply the current step pattern to the motor coils.
         for (uint i = 0; i < MTR_COILS; i++)
             gpio_put(
                 motorCoils[i]->getPin(),
@@ -73,14 +79,19 @@ bool Motor::runMotor(Encoder& encoder)
         updateStep(direction);
         motorStepCounter++;
 
+        // Update encoder position from queued encoder events.
         processEncoderEvents(encoder);
 
-        if (stuckDetectionEnabled && checkForStuck(encoder))
+        // Start checking for a stuck door after the startup delay.
+        if (stuckDetectionEnabled &&
+            motorStepCounter > 1000 &&
+            checkForStuck(encoder))
         {
             handleDoorStuck(encoder);
             return false;
         }
 
+        // Check for user or limit-switch stop events.
         queue_try_remove(&sw1EventQ, &sw1Stop);
         queue_try_remove(&lmswMtrEventQ, &lmswMtrStop);
         queue_try_remove(&lmswEncEventQ, &lmswEncStop);
@@ -98,52 +109,50 @@ bool Motor::runMotor(Encoder& encoder)
 
 bool Motor::checkForStuck(Encoder& encoder)
 {
-    const int motorSteps =
-        direction
-            ? movementCalibration.motorStepsOpening
-            : movementCalibration.motorStepsClosing;
-
-    const int encoderSteps =
-        direction
-            ? movementCalibration.encoderStepsOpening
-            : movementCalibration.encoderStepsClosing;
-
-    if (motorSteps <= 0 || encoderSteps <= 0)
-        return false;
-
+    // Use the single calibrated motor/encoder ratio.
     const float motorStepsPerEncoder =
-        static_cast<float>(motorSteps) / encoderSteps;
+        movementCalibration.motorStepsPerEncoder;
+
+    if (motorStepsPerEncoder <= 0.0f)
+        return false;
 
     const int motorStepsNeeded =
         static_cast<int>(motorStepsPerEncoder * 2.0f);
 
+    // Wait until enough motor steps have passed before checking.
     if (motorStepCounter - stuckCheck.motorSteps < motorStepsNeeded)
         return false;
 
     const int encoderMovement =
         std::abs(encoder.getPosition() - stuckCheck.encoderPosition);
 
-    std::cout << "[STUCK CHECK] Motor: " << motorStepCounter - stuckCheck.motorSteps
-        << " | Encoder: " << encoderMovement
-        << " | Ratio: " << motorStepsPerEncoder << std::endl;
+    std::cout << "[STUCK CHECK] Motor: "
+        << motorStepCounter - stuckCheck.motorSteps
+        << " | Encoder: "
+        << encoderMovement
+        << " | Ratio: "
+        << motorStepsPerEncoder
+        << std::endl;
 
     resetStuckCheck(encoder);
 
+    // No encoder movement means the door is considered stuck.
     return encoderMovement == 0;
 }
 
 void Motor::resetStuckCheck(Encoder& encoder)
 {
+    // Store the current motor and encoder positions as a reference.
     stuckCheck.motorSteps = motorStepCounter;
     stuckCheck.encoderPosition = encoder.getPosition();
 }
 
 void Motor::handleDoorStuck(Encoder& encoder)
 {
+    // Stop the motor and set the error state.
     stopMotor();
     doorStuck = true;
     errorState = true;
-    calibrated = false;
 
     std::cout << "\n================================" << std::endl;
     std::cout << "ERROR: DOOR STUCK" << std::endl;
@@ -154,122 +163,110 @@ void Motor::handleDoorStuck(Encoder& encoder)
 
 void Motor::processEncoderEvents(Encoder& encoder)
 {
+    // Process all pending encoder events.
     bool encoderEvent;
 
     while (queue_try_remove(&encEventQ, &encoderEvent))
         encoder.updatePosition();
 }
 
-
 void Motor::calibrateMotor(Encoder& encoder)
 {
+    // Reset states before starting calibration.
     calibrated = false;
     errorState = false;
     doorStuck = false;
 
-    if (!gpio_get(PIN_LMSW_ENC))
-    {
-        runMotor(encoder);
-    }
-    else
+    // Reverse direction if the limit switch is already pressed.
+    if (!gpio_get(PIN_LMSW_MTR))
     {
         direction = !direction;
     }
+    else
+    {
+        runMotor(encoder);
+    }
 
     sleep_ms(100);
 
-    encoder.resetPosition();
-    motorStepCounter = 0;
+    float ratio[2];
 
-    runMotor(encoder);
-
-    if (!direction)
+    // Run calibration twice and calculate one ratio from each run.
+    for (int i = 0; i < 2; i++)
     {
-        movementCalibration.motorStepsOpening = motorStepCounter;
-        movementCalibration.encoderStepsOpening =
-            std::abs(encoder.getPosition());
-    }
-    else
-    {
-        movementCalibration.motorStepsClosing = motorStepCounter;
-        movementCalibration.encoderStepsClosing =
-            std::abs(encoder.getPosition());
-    }
+        encoder.resetPosition();
+        motorStepCounter = 0;
 
-    std::cout << "\n[CALIBRATION] First run:" << std::endl;
-    std::cout << "Motor steps: "
-        << motorStepCounter << std::endl;
-    std::cout << "Encoder steps: "
-        << std::abs(encoder.getPosition()) << std::endl;
+        runMotor(encoder);
 
-    encoder.resetPosition();
-    motorStepCounter = 0;
+        const int encoderSteps = std::abs(encoder.getPosition());
 
-    sleep_ms(100);
+        ratio[i] = encoderSteps > 0
+                       ? static_cast<float>(motorStepCounter) / encoderSteps
+                       : 0.0f;
 
-    runMotor(encoder);
+        std::cout << "[CALIBRATION] Run " << i + 1
+            << " | Motor: " << motorStepCounter
+            << " | Encoder: " << encoderSteps
+            << " | Ratio: " << ratio[i]
+            << std::endl;
 
-    if (!direction)
-    {
-        movementCalibration.motorStepsOpening = motorStepCounter;
-        movementCalibration.encoderStepsOpening =
-            std::abs(encoder.getPosition());
-    }
-    else
-    {
-        movementCalibration.motorStepsClosing = motorStepCounter;
-        movementCalibration.encoderStepsClosing =
-            std::abs(encoder.getPosition());
+        sleep_ms(100);
     }
 
-    std::cout << "\n[CALIBRATION] Second run:" << std::endl;
-    std::cout << "Motor steps: "
-        << motorStepCounter << std::endl;
-    std::cout << "Encoder steps: "
-        << std::abs(encoder.getPosition()) << std::endl;
+    // Use the average of the two calibration ratios.
+    movementCalibration.motorStepsPerEncoder =
+        (ratio[0] + ratio[1]) / 2.0f;
 
     movementCalibration.valid =
-        movementCalibration.motorStepsOpening > 0 &&
-        movementCalibration.encoderStepsOpening > 0 &&
-        movementCalibration.motorStepsClosing > 0 &&
-        movementCalibration.encoderStepsClosing > 0;
+        ratio[0] > 0.0f &&
+        ratio[1] > 0.0f;
 
     calibrated = movementCalibration.valid;
     errorState = !movementCalibration.valid;
 
     encoder.resetPosition();
     motorStepCounter = 0;
-}
 
+    std::cout << "[CALIBRATION] Average ratio: "
+        << movementCalibration.motorStepsPerEncoder
+        << std::endl;
+}
 
 const Motor::MovementCalibration& Motor::getCalibration() const
 {
+    // Return the current calibration data.
     return movementCalibration;
 }
 
 bool Motor::isDoorStuck() const
 {
+    // Return whether the motor detected a stuck door.
     return doorStuck;
 }
 
 doorState_t Motor::getCurrentState() const
 {
+    // Return the current door state.
     return currentDoorState;
 }
 
 doorState_t Motor::getPreviousState() const
 {
+    // Return the previous door state.
     return previousDoorState;
 }
 
 void Motor::setCurrentState(const doorState_t& dir)
 {
+    // Save the old state before changing it.
     previousDoorState = currentDoorState;
     currentDoorState = dir;
 }
 
 void Motor::updateStep(bool opening)
 {
+    // Move through the coil sequence in the selected direction.
     if (opening)
         step = step > 0 ? step - 1 : MTR_STEPS - 1;
     else
@@ -278,16 +275,19 @@ void Motor::updateStep(bool opening)
 
 bool Motor::getDirection()
 {
+    // Return the current motor direction.
     return direction;
 }
 
 bool Motor::getErrorState()
 {
+    // Return whether an error is active.
     return errorState;
 }
 
 void Motor::createStatusLeds()
 {
+    // Create the status LED controller.
     statusLeds = std::make_shared<StatusLeds>(
         std::vector{PIN_LED_1, PIN_LED_2, PIN_LED_3},
         weak_from_this());
@@ -295,23 +295,41 @@ void Motor::createStatusLeds()
 
 void Motor::updateStatusLeds()
 {
+    // Update the motor status LEDs.
     statusLeds->updateCall();
 }
 
 void Motor::stopMotor()
 {
+    // Turn off all motor coils.
     for (const auto& coil : motorCoils)
         coil->write(false);
 }
 
 void Motor::clearDoorStuck()
 {
+    // Clear the stuck and error flags.
     doorStuck = false;
     errorState = false;
-    calibrated = true;
 }
 
 void Motor::reverseDirection()
 {
+    // Toggle the motor direction.
     direction = !direction;
+}
+bool Motor::moveAwayFromLimit()
+{
+    // Select a safe direction when a limit is already pressed.
+    if (!gpio_get(PIN_LMSW_MTR))
+    {
+        reverseDirection();
+    }
+
+    if (!gpio_get(PIN_LMSW_ENC))
+    {
+        reverseDirection();
+    }
+
+    return false;
 }
