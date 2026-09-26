@@ -1,5 +1,5 @@
 #include "wifi.h"
-#include "wifi_config.h"
+#include "../config.h"
 #include "pico/cyw43_arch.h"
 
 
@@ -7,23 +7,14 @@
 WIFI::WIFI() : ssid(WIFI_SSID), password(WIFI_PASSWORD) {}
 
 bool WIFI::init() {
-    printf("wifi init: ");
-    if (cyw43_arch_init()) {
-        printf("FAILED\n");
+    if (cyw43_arch_init_with_country(CYW43_COUNTRY_FINLAND)) {
         return false;
     } else {
-        printf("SUCCEED"); 
         return true;
     }
 }
 
 bool WIFI::connectWifi() {
-
-    // Initialize the hardware
-    if (cyw43_arch_init_with_country(CYW43_COUNTRY_FINLAND)) {
-        printf("Failed to initialize hardware.\n") ;
-        return false;
-    }
 
     // Make sure the LED is off
     cyw43_arch_gpio_put(CYW43_WL_GPIO_LED_PIN, 0) ;
@@ -35,7 +26,7 @@ bool WIFI::connectWifi() {
     printf("Attempting connection . . . \n") ;
 
     // Connect to the network
-    if (cyw43_arch_wifi_connect_blocking(this->ssid, this->password, CYW43_AUTH_WPA3_SAE_AES_PSK)) {
+    if (cyw43_arch_wifi_connect_blocking(this->ssid, this->password, CYW43_AUTH_WPA2_MIXED_PSK)) {
        return false;
     }
 

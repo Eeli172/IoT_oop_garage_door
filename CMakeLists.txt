@@ -24,7 +24,7 @@ add_executable(${PROJECT_NAME}
         src/gpios/leds/leds.cpp
         src/sys/sys.cpp
         src/sys/mqtt/mqtt.cpp
-        src/sys/wifi/wifi.cpp
+        src/sys/mqtt/wifi/wifi.cpp
         src/motor_run/motor_run.cpp
         src/interrupts/interrupts.cpp
 )

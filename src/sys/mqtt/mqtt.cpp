@@ -4,7 +4,6 @@
 
 /* CUSTOM */
 #include "mqtt.h"
-#include "../wifi/wifi.h"
 
 
 
@@ -19,6 +18,7 @@ bool MQTTManager::initWiFi()
     {
         if (this->wiFiManager.init())
         {
+            this->wiFiEnabled = true;
             std::cout << "[OK] --> Wi-Fi Hardware initialization successful." << std::endl;
         }
 
@@ -42,11 +42,12 @@ bool MQTTManager::initWiFi()
 bool MQTTManager::subsribeToTopic(char* topic)
 {
 
-
+    return true;
 }
 
 bool MQTTManager::publishToTopic(char* topic)
 {
 
+    return true;
 }
 

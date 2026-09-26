@@ -22,6 +22,8 @@ int main()
 {
     stdio_init_all();
     sleep_ms(500);
+    std::cout << "\n BOOT\n" << std::endl;
+
 
     System sys;
     bool queueDummy;
@@ -38,7 +40,6 @@ int main()
 
     stepperMotor->createStatusLeds();
 
-    std::cout << "\n BOOT\n" << std::endl;
     while (true)
     {
         switch (sys.getSysState())

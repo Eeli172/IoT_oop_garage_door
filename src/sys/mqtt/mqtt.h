@@ -1,8 +1,7 @@
 #ifndef IOT_OOP_GARAGE_DOOR_MQTT_H
 #define IOT_OOP_GARAGE_DOOR_MQTT_H
 
-#include "../wifi/wifi.h"
-#include <string>
+#include "wifi/wifi.h"
 
 class MQTTManager : public WIFI
 {
