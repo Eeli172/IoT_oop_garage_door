@@ -19,12 +19,13 @@ add_compile_options(-Wall
 
 add_executable(${PROJECT_NAME}
         src/main.cpp
+        src/system/system.cpp
+        src/system/mqtt/mqtt.cpp
+        src/system/wifi/wifi.cpp
+        src/system/eeprom/eeprom.cpp
         src/gpios/gpios.cpp
         src/gpios/encoder/encoder.cpp
         src/gpios/leds/leds.cpp
-        src/system/sys.cpp
-        src/system/mqtt/mqtt.cpp
-        src/system/wifi/wifi.cpp
         src/motor_run/motor_run.cpp
         src/interrupts/interrupts.cpp
 )

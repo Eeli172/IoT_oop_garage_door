@@ -8,7 +8,7 @@
 #include <vector>
 
 // CUSTOM
-#include "system/sys.h"
+#include "system/system.h"
 #include "gpios/gpios.h"
 #include "interrupts/interrupts.h"
 #include "motor_run/motor_run.h"
@@ -50,12 +50,12 @@ int main()
 
     while (true)
     {
-        switch (sys.getSysState())
+        switch (sys.getCalibState())
         {
         case PRE_CALIB:
             if (gpio_get(PIN_SW0) && gpio_get(PIN_SW2))
             {
-                sys.setSysState(CALIBRATING);
+                sys.setCalibState(CALIBRATING);
             }
             break;
 
@@ -67,7 +67,7 @@ int main()
             stepperMotor->calibrateMotor(*encoder);
             std::cout << "Calibration: finished" << std::endl;
             userButtons->enableInterrupts(std::vector{PIN_SW1});
-            sys.setSysState(CALIBRATED);
+            sys.setCalibState(CALIBRATED);
             break;
 
 

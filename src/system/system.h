@@ -8,8 +8,6 @@
 #include "mqtt/mqtt.h"
 
 /* SYSTEM */
-// STATE MACHINE ENUM
-
 // SYSTEM MAIN CLASS
 class System
 {
@@ -18,11 +16,10 @@ public:
     System(const System&) = delete;
     ~System() = default;
 
-    void setSysState(const stateMachine_t &state);
-    void setCalibrationStatus(const bool &status);
+    void setCalibState(const calibrationState_t &state);
     void setDoorState(const doorState_t &state);
 
-    stateMachine_t getSysState() const;
+    calibrationState_t getCalibState() const;
 
     // WIFI + MQTT
     bool connectToMQTTServer();
@@ -32,9 +29,8 @@ public:
     void loadSystem();
 
 private:
-    stateMachine_t sysState;
-    bool calibrationStatus;
     doorState_t doorState;
+    calibrationState_t calibState;
     MQTTManager mqttBroker;
 };
 
