@@ -26,7 +26,7 @@ bool WIFI::connectWifi() {
     printf("Attempting connection . . . \n") ;
 
     // Connect to the network
-    if (cyw43_arch_wifi_connect_timeout_ms(this->ssid, this->password, CYW43_AUTH_WPA2_MIXED_PSK, WIFI_CONNECTING_TIMEOUT_MS)) {
+    if (cyw43_arch_wifi_connect_timeout_ms(this->ssid, this->password, CYW43_AUTH_WPA2_AES_PSK, WIFI_CONNECTING_TIMEOUT_MS)) {
        return false;
     }
 

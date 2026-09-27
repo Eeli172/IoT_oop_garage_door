@@ -1,8 +1,13 @@
+/* STL */
+#include <iostream>
+
+/* CUSTOM */
 #include "system.h"
 
 
+
 System::System() :
-doorState(CLOSED), calibState(PRE_CALIB)
+doorState(CLOSED), calibState(PRE_CALIB), mqttBroker(std::make_unique<MQTTManager>())
 {}
 
 
@@ -27,8 +32,16 @@ calibrationState_t System::getCalibState() const
 
 
 // MQTT FUNCTIONS
-bool System::connectToMQTTServer()
+void System::connectToMQTTServer() const
 {
-
-    return true;
+    // [1]: Attempt to connect to a Wi-Fi.
+    if (this->mqttBroker->initWiFi())
+    {
+        /* [2]: Create a new mqtt client instance, initiate callback functions for connection,
+        subscribe & publish */
+        if (this->mqttBroker->createMQTTClient())
+        {
+            std::cout << "MQTT-SYSTEM relationship established successfully." << std::endl;
+        }
+    }
 }

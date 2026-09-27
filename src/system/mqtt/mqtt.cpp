@@ -15,9 +15,7 @@
 MQTTManager::MQTTManager() :
 wiFiManager(WIFI()), hardwareEnabled(false), mqttEnabled(false),
 currentTopic(MQTT_DEFAULT_TOPIC), message(MQTT_DEFAULT_MSG)
-{
-    mqttInfo.mqtt_client = mqtt_client_new();
-}
+{}
 
 bool MQTTManager::initWiFi()
 {
@@ -48,6 +46,8 @@ bool MQTTManager::initWiFi()
 bool MQTTManager::createMQTTClient()
 {
     IP_ADDR4(&mqttInfo.broker_ip, 127, 0, 0, 1);
+
+    mqttInfo.mqtt_client = mqtt_client_new();
 
     if (mqttInfo.mqtt_client != nullptr)
     {
