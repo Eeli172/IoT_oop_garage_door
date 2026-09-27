@@ -25,6 +25,7 @@ public:
     stateMachine_t getSysState() const;
 
     // WIFI + MQTT
+    bool connectToMQTTServer();
 
     // EEPROM
     void saveSystem();

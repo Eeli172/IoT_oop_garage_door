@@ -35,14 +35,13 @@ class MQTTManager
 
     /* MQTT ATTRIBUTES */
     bool mqttEnabled;
-
     mqtt_information mqttInfo;
 
     // DATA
-    std::string nextCommandBuffer;
-    std::string previousTopic;
-    std::string currentTopic;
-    std::string message;
+    std::string nextCommandBuffer; // Holds the next command in line { RUN, STOP } .
+    std::string previousTopic; // Once a new topic is subscribed to, holds the info on which topic to first unsubscribe.
+    std::string currentTopic; // Holds the newest and currently subscribed topic.
+    std::string message; // String to hold the status-message to publish to the currently subscribed topic.
 
 };
 
