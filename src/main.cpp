@@ -46,7 +46,6 @@ int main()
     initQueues();
     encoder->enableInterrupts();
     stepperMotor->createStatusLeds();
-    sys.connectToMQTTServer();
 
     while (true)
     {

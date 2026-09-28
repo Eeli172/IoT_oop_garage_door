@@ -8,6 +8,7 @@
 #include "lwip/apps/mqtt.h"
 
 #include "../../macros/macros.h"
+#include "pico/cyw43_arch.h"
 #include "types/types.h"
 
 
@@ -45,28 +46,36 @@ bool MQTTManager::initWiFi()
 
 bool MQTTManager::createMQTTClient()
 {
-    IP_ADDR4(&mqttInfo.broker_ip, 127, 0, 0, 1);
+    IP_ADDR4(&mqttInfo.broker_ip, 192, 168, 101, 106);
 
+    cyw43_arch_lwip_begin(); // mutex lukko
     mqttInfo.mqtt_client = mqtt_client_new();
+    cyw43_arch_lwip_end();
 
-    if (mqttInfo.mqtt_client != nullptr)
-    {
-        mqttInfo.ci.client_id = MQTT_CLIENT_ID;
-        mqttInfo.ci.keep_alive = MQTT_CLIENT_KA_TIME;
+    if (mqttInfo.mqtt_client == nullptr) return false;
 
-        const err_t errCon = mqtt_client_connect(mqttInfo.mqtt_client, &mqttInfo.broker_ip,
-            MQTT_BROKER_PORT, mqttConnectCb, this, &mqttInfo.ci);
+    memset(&mqttInfo.ci, 0, sizeof(mqttInfo.ci));
 
-        if (errCon == ERR_OK)
-        {
-            this->mqttEnabled = true;
-            return true;
-        }
-        return false;
-    }
+    mqttInfo.ci.client_id = MQTT_CLIENT_ID;
+    mqttInfo.ci.keep_alive = MQTT_CLIENT_KA_TIME;
 
-    std::cout << "[MQTT-FAIL] --> Fail in reserving a new mqtt_client instance." << std::endl;
-    return false;
+    cyw43_arch_lwip_begin(); // voitas tehä myös lock_guardilla = luokka, jonka constructor kutsuu tämän metodin, destructor kutsuu .end()
+    const err_t errCon = mqtt_client_connect(
+        mqttInfo.mqtt_client,
+        &mqttInfo.broker_ip,
+        1883,
+        mqttConnectCb,
+        this,
+        &mqttInfo.ci
+    );
+    cyw43_arch_lwip_end();
+
+    return errCon == ERR_OK;
+}
+
+bool MQTTManager::getMQTTStatus()
+{
+    return this->mqttEnabled;
 }
 
 void MQTTManager::setTopic(const std::string& newTopic)
@@ -80,7 +89,7 @@ void MQTTManager::setTopic(const std::string& newTopic)
 
 void MQTTManager::mqttIncomingPublishCb(void *arg, const char *topic, u32_t tot_len)
 {
-    std::cout << "Incoming message with length of " << tot_len << ", from topic: <" << topic << ">" << std::endl;
+   printf("[MQTT-DATA-CB] --> Incoming message with length of: %d, from topic: %s\n", tot_len, topic);
 }
 
 void MQTTManager::mqttIncomingDataCb(void *arg, const u8_t *data, u16_t len, u8_t flags)
@@ -90,7 +99,7 @@ void MQTTManager::mqttIncomingDataCb(void *arg, const u8_t *data, u16_t len, u8_
         const std::string dataBuffer(reinterpret_cast<const char*>(data), len);
         self->nextCommandBuffer = dataBuffer;
 
-        std::cout << "[MQTT-DATA] --> Data received: " << dataBuffer << std::endl;
+        printf("[MQTT-DATA-CB] --> Data received: %s\n", self->nextCommandBuffer.c_str());
     }
 }
 
@@ -98,11 +107,11 @@ void MQTTManager::mqttSubscribeCb(void* arg, err_t result)
 {
     if (result == ERR_OK)
     {
-        std::cout << "[MQTT-SUBSCRIBE] --> MQTT subscribe successful." << std::endl;
+        printf("[MQTT-SUBSCRIBE-CB] --> MQTT subscribe successful.\n");
     }
     else
     {
-        std::cout << "[MQTT-ERROR] --> MQTT subscribe failed with result: " << result << std::endl;
+        printf("[MQTT-SUBSCRIBE-ERROR-CB] --> MQTT subscribe failed with result: %d\n", result);
     }
 }
 
@@ -110,11 +119,11 @@ void MQTTManager::mqttPublishCb(void* arg, err_t result)
 {
     if (result == ERR_OK)
     {
-        std::cout << "[MQTT-PUBLISH] --> MQTT publish successful." << std::endl;
+       printf("[MQTT-PUBLISH-CB] --> MQTT publish successful.\n");
     }
     else
     {
-        std::cout << "[MQTT-ERROR] --> MQTT publish failed: " << result << std::endl;
+        printf("[MQTT-PUBLISH-ERROR-CB] --> MQTT publish failed with status: %d\n", result);
     }
 }
 
@@ -123,7 +132,7 @@ void MQTTManager::mqttConnectCb(mqtt_client_t* client, void *arg, mqtt_connectio
 {
     if (status != MQTT_CONNECT_ACCEPTED)
     {
-        std::cout << "[MQTT-ERROR] --> Connection failed with status: " << status << std::endl;
+        printf("[MQTT-CONNECT-ERROR-CB] --> Connection failed with status: %d\n", status);
         return;
     }
 
@@ -133,28 +142,7 @@ void MQTTManager::mqttConnectCb(mqtt_client_t* client, void *arg, mqtt_connectio
             mqttIncomingPublishCb,
             mqttIncomingDataCb,
             self);
-
-        // SUBSCRIBING CALLBACK
-        err_t errSub = mqtt_sub_unsub(self->mqttInfo.mqtt_client, MQTT_DEFAULT_TOPIC, 1, mqttSubscribeCb, self, SUBSCRIBE);
-
-        if (errSub != ERR_OK)
-        {
-            std::cout << "[MQTT-ERROR] --> Error whilst trying to use \"mqtt_sub_unsub()\" function." << std::endl;
-            return;
-        }
-
-        // PUBLISHING CALLBACK
-        errSub = mqtt_publish(self->mqttInfo.mqtt_client, MQTT_DEFAULT_TOPIC,
-            MQTT_DEFAULT_MSG, strlen(MQTT_DEFAULT_MSG),
-            1, 0, mqttPublishCb, self);
-
-        if (errSub != ERR_OK)
-        {
-            std::cout << "[MQTT-ERROR] --> Error whilst trying to use \"mqtt_publish()\" function." << std::endl;
-            return;
-        }
-
-        std::cout << "[MQTT-CONNECTION-OK] --> MQTT connection successful." << std::endl;
+        self->mqttEnabled = true;
     }
 }
 
@@ -163,11 +151,13 @@ bool MQTTManager::subscribeToTopic(const mqttSubState_t &subsState)
 {
     if (!mqttEnabled) return false;
 
+    cyw43_arch_lwip_begin();
     const err_t errSub = mqtt_sub_unsub(mqttInfo.mqtt_client, this->currentTopic.c_str(), 1, mqttSubscribeCb, this, subsState);
+    cyw43_arch_lwip_end();
 
     if (errSub != ERR_OK)
     {
-        std::cout << "[MQTT-ERROR] --> Error whilst trying to use \"mqtt_sub_unsub()\" function." << std::endl;
+        std::cout << "[MQTT-SUBSCRIBE-ERROR] --> Error whilst trying to use \"mqtt_sub_unsub()\" function." << std::endl;
         return false;
     }
 
@@ -179,13 +169,15 @@ bool MQTTManager::publishToTopic(const std::string &topic)
 {
     if (!mqttEnabled) return false;
 
+    cyw43_arch_lwip_begin();
     const err_t errSub = mqtt_publish(mqttInfo.mqtt_client, topic.c_str(),
         message.c_str(), message.length(),
         1, 0, mqttPublishCb, this);
+    cyw43_arch_lwip_end();
 
     if (errSub != ERR_OK)
     {
-        std::cout << "[MQTT-ERROR] --> Error whilst trying to use \"mqtt_publish()\" function: " << errSub << std::endl;
+        std::cout << "[MQTT-PUBLISH-ERROR] --> Error whilst trying to use \"mqtt_publish()\" function: " << errSub << std::endl;
         return false;
     }
 

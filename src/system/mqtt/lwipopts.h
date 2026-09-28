@@ -1,15 +1,17 @@
 #ifndef _LWIPOPTS_H
 #define _LWIPOPTS_H
 
-// Ei käyttöjärjestelmää (Pico SDK huolehtii tausta-ajoista)
+// Pico SDK ilman RTOS:ia vaatii NO_SYS = 1
 #define NO_SYS                      1
+
 #define LWIP_SOCKET                 0
 #define LWIP_NETCONN                0
 
-// Muisti- ja puskuriasetukset
+// Muisti- ja puskuriasetukset (Kasvatettu MEM_SIZE turvalliseksi)
 #define MEM_LIBC_MALLOC             0
 #define MEM_ALIGNMENT               4
-#define MEM_SIZE                    4000
+#define MEM_SIZE                    16000
+#define MEMP_NUM_TCP_PCB            5
 #define MEMP_NUM_TCP_SEG            32
 #define MEMP_NUM_ARP_QUEUE          10
 #define PBUF_POOL_SIZE              24
@@ -25,10 +27,10 @@
 #define LWIP_TCP                    1
 #define LWIP_UDP                    1
 
-// TCP puskurit
-#define TCP_MSS                     (1500 - 40)
-#define TCP_WND                     (8 * TCP_MSS)
-#define TCP_SND_BUF                 (8 * TCP_MSS)
+// TCP puskurit korjattuna
+#define TCP_MSS                     1460
+#define TCP_WND                     (4 * TCP_MSS)
+#define TCP_SND_BUF                 (4 * TCP_MSS)
 #define TCP_SND_QUEUELEN            (4 * TCP_SND_BUF/TCP_MSS)
 
 // MQTT Tuki

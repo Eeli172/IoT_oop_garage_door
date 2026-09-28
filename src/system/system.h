@@ -24,6 +24,7 @@ public:
 
     // WIFI + MQTT
     void connectToMQTTServer() const;
+    void subscribeToTopic(const std::string &topic) const;
 
     // EEPROM
     void saveSystem();
