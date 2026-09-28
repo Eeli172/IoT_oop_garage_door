@@ -92,12 +92,6 @@ int main()
                     if (queue_try_remove(&sw1EventQ, &queueDummy))
                     {
                         stepperMotor->clearDoorStuck();
-
-                        // Leave an active limit, otherwise reverse normally.
-                        if (!stepperMotor->moveAwayFromLimit())
-                        {
-                            stepperMotor->reverseDirection();
-                        }
                     }
                     else
                     {

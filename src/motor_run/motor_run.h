@@ -5,8 +5,8 @@
 #include <vector>
 
 #include "../gpios/gpios.h"
-#include "../types/types.h"
 #include "../gpios/encoder/encoder.h"
+#include "../types/types.h"
 
 class StatusLeds;
 
@@ -20,37 +20,45 @@ public:
     };
 
     Motor(const std::vector<int>& coilGpios, bool inverted);
-    Motor(const Motor&) = delete;
     ~Motor() = default;
 
+    Motor(const Motor&) = delete;
+    Motor& operator=(const Motor&) = delete;
+
+
+    void runMotorSteps();
     bool runMotor(Encoder& encoder);
+    void stopMotor();
+
+    void reverseDirection();
+    bool reverseOnPressedLimitSwitch();
+
+    bool getDirection() const;
+
+
     void calibrateMotor(Encoder& encoder);
+
+    const MovementCalibration& getCalibration() const;
+
+
+    bool isDoorStuck() const;
+    void clearDoorStuck();
+
+    bool getErrorState() const;
+
 
     void createStatusLeds();
     void updateStatusLeds();
 
-    void setCurrentState(const doorState_t& dir);
-    void updateStep(bool opening);
 
     doorState_t getCurrentState() const;
     doorState_t getPreviousState() const;
 
-    bool getErrorState();
-    bool getDirection();
-
-    const MovementCalibration& getCalibration() const;
-    bool isDoorStuck() const;
-
-    void clearDoorStuck();
-    void reverseDirection();
-    bool moveAwayFromLimit();
+    void setCurrentState(const doorState_t& state);
 
 private:
-    void stopMotor();
-    void processEncoderEvents(Encoder& encoder);
-    bool checkForStuck(Encoder& encoder);
-    void resetStuckCheck(Encoder& encoder);
-    void handleDoorStuck(Encoder& encoder);
+
+    static int InstructionsMatrix[8][4];
 
     std::vector<std::unique_ptr<CommonGPIO>> motorCoils;
     std::shared_ptr<StatusLeds> statusLeds;
@@ -59,23 +67,26 @@ private:
     doorState_t previousDoorState;
 
     int stepsToEnd;
-    static int runInstructionsMatrix[8][4];
     int step;
-
+    int motorStepCounter;
     bool direction;
     bool errorState;
     bool calibrated;
+    bool doorStuck;
 
-    int motorStepCounter;
+    int stepsSinceEncoder;
 
-    struct
-    {
-        int motorSteps;
-        int encoderPosition;
-    } stuckCheck;
 
     MovementCalibration movementCalibration;
-    bool doorStuck;
+
+
+    float calculateMotorStepsPerEncoder(
+        int motorSteps,
+        int encoderSteps) const;
+
+    bool stuckDetectionEnabled() const;
+    void checkForStuck();
+    void handleDoorStuck(Encoder& encoder);
 };
 
-#endif
+#endif // IOT_OOP_GARAGE_DOOR_MOTOR_RUN_H

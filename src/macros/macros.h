@@ -7,6 +7,12 @@
 #define LED_BLINK_TIMEOUT_MS 500
 #define I2C_POLLING_TIMEOUT_US 100
 #define EEPROM_ACK_TIMEOUT_US 5000
+#define MOTOR_STEP_DELAY_MS 1
+
+
+// CALIBRATION
+#define STUCK_STEP_TOLERANCE 200 //safe minimum so it will not stop randomly 150
+#define CALIBRATION_RUNS 2
 
 
 // MQTT

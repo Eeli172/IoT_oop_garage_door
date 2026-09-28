@@ -1,9 +1,11 @@
 #include "encoder.h"
-#include "hardware/gpio.h"
+
 #include <iostream>
 
-Encoder::Encoder(int pinA, int pinB, bool pullup) :
-    encoderPosition(0)
+#include "hardware/gpio.h"
+#include "interrupts/interrupts.h"
+
+Encoder::Encoder(int pinA, int pinB, bool pullup)
 {
     this->pinA = std::make_unique<CommonGPIO>(
         pinA,
@@ -20,20 +22,33 @@ Encoder::Encoder(int pinA, int pinB, bool pullup) :
     );
 }
 
-
 void Encoder::enableInterrupts() const
 {
     gpio_set_irq_enabled_with_callback(
-        this->pinA->getPin(),
+        pinA->getPin(),
         GPIO_IRQ_EDGE_RISE,
         true,
         &commonIsr
     );
 }
 
+bool Encoder::processInterrupts()
+{
+    bool encoderEvent = false;
+    bool eventReceived = false;
+
+    while (queue_try_remove(&encEventQ, &encoderEvent))
+    {
+        updatePosition();
+        eventReceived = true;
+    }
+
+    return eventReceived;
+}
+
 EncoderState Encoder::checkDirection() const
 {
-    if (this->pinB->read() == 0)
+    if (pinB->read() == 0)
     {
         return EncoderState::Clockwise;
     }
@@ -47,15 +62,21 @@ void Encoder::updatePosition()
 
     if (direction == EncoderState::Clockwise)
     {
-        encoderPosition++;
+        ++encoderPosition;
 
-        std::cout << "[ENCODER] Clockwise | position = " << encoderPosition << std::endl;
+        std::cout
+            << "[ENCODER] Clockwise | position = "
+            << encoderPosition
+            << std::endl;
     }
-    else if (direction == EncoderState::CounterClockwise)
+    else
     {
-        encoderPosition--;
+        --encoderPosition;
 
-        std::cout << "[ENCODER] Counter-clockwise | position = " << encoderPosition << std::endl;
+        std::cout
+            << "[ENCODER] Counter-clockwise | position = "
+            << encoderPosition
+            << std::endl;
     }
 }
 
