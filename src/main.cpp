@@ -45,7 +45,6 @@ int main()
 
     initQueues();
     encoder->enableInterrupts();
-
     stepperMotor->createStatusLeds();
 
     while (true)

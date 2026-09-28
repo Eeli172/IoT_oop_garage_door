@@ -17,6 +17,7 @@ class MQTTManager
     bool createMQTTClient();
     static void mqttConnectCb(mqtt_client_t *client, void *arg, mqtt_connection_status_t status);
     static void mqttIncomingDataCb(void *arg, const u8_t *data, u16_t len, u8_t flags);
+    bool getMQTTStatus();
 
     // SUBSCRIBING TO TOPIC
     bool subscribeToTopic(const mqttSubState_t &subsState);

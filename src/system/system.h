@@ -2,6 +2,7 @@
 #define GARAGE_DOOR_SYS_H
 
 /* STL */
+#include <memory>
 
 /* CUSTOM */
 #include "../types/types.h"
@@ -19,10 +20,11 @@ public:
     void setCalibState(const calibrationState_t &state);
     void setDoorState(const doorState_t &state);
 
-    calibrationState_t getCalibState() const;
+    [[nodiscard]] calibrationState_t getCalibState() const;
 
     // WIFI + MQTT
-    bool connectToMQTTServer();
+    void connectToMQTTServer() const;
+    void subscribeToTopic(const std::string &topic) const;
 
     // EEPROM
     void saveSystem();
@@ -31,7 +33,7 @@ public:
 private:
     doorState_t doorState;
     calibrationState_t calibState;
-    MQTTManager mqttBroker;
+    std::unique_ptr<MQTTManager> mqttBroker;
 };
 
 #endif //GARAGE_DOOR_SYS_H

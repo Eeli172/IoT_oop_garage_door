@@ -1,8 +1,15 @@
+/* STL */
+#include <iostream>
+
+/* CUSTOM */
 #include "system.h"
+
+#include "pico/cyw43_arch.h"
+#include "pico/time.h"
 
 
 System::System() :
-doorState(CLOSED), calibState(PRE_CALIB)
+doorState(CLOSED), calibState(PRE_CALIB), mqttBroker(std::make_unique<MQTTManager>())
 {}
 
 
@@ -27,8 +34,39 @@ calibrationState_t System::getCalibState() const
 
 
 // MQTT FUNCTIONS
-bool System::connectToMQTTServer()
+void System::connectToMQTTServer() const
 {
+    // [1]: Attempt to connect to a Wi-Fi.
+    if (this->mqttBroker->initWiFi())
+    {
+        /* [2]: Create a new mqtt client instance, initiate callback functions for connection,
+        subscribe & publish */
+        if (this->mqttBroker->createMQTTClient())
+        {
+            const absolute_time_t timeout = get_absolute_time();
+            while (!this->mqttBroker->getMQTTStatus() && absolute_time_diff_us(timeout, get_absolute_time()) < 10000000)
+            {
+                cyw43_arch_poll();
+                sleep_ms(10);
+            }
 
-    return true;
+            if (this->mqttBroker->getMQTTStatus())
+            {
+                std::cout << "MQTT connection established successfully" << std::endl;
+            }
+            else
+            {
+                std::cout << "MQTT connection ran into a timeout." << std::endl;
+            }
+        }
+    }
+}
+
+void System::subscribeToTopic(const std::string &topic) const
+{
+    this->mqttBroker->setTopic(topic);
+    if (this->mqttBroker->subscribeToTopic(SUBSCRIBE))
+    {
+        std::cout << "MQTT subscription established successfully to topic: " << topic << std::endl;
+    }
 }
