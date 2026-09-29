@@ -44,10 +44,15 @@ void System::connectToMQTTServer() const
         if (this->mqttBroker->createMQTTClient())
         {
             const absolute_time_t timeout = get_absolute_time();
-            while (!this->mqttBroker->getMQTTStatus() && absolute_time_diff_us(timeout, get_absolute_time()) < 10000000)
+            while (!this->mqttBroker->getMQTTStatus() && absolute_time_diff_us(timeout, get_absolute_time()) < 20000000)
             {
                 cyw43_arch_poll();
-                sleep_ms(10);
+                
+                cyw43_arch_lwip_begin();
+                
+                cyw43_arch_lwip_end();
+                
+                sleep_ms(1);
             }
 
             if (this->mqttBroker->getMQTTStatus())

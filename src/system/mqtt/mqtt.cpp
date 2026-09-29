@@ -46,7 +46,7 @@ bool MQTTManager::initWiFi()
 
 bool MQTTManager::createMQTTClient()
 {
-    IP_ADDR4(&mqttInfo.broker_ip, 192, 168, 101, 106);
+    IP_ADDR4(&mqttInfo.broker_ip, 106, 101, 168, 192);
 
     cyw43_arch_lwip_begin(); // mutex lukko
     mqttInfo.mqtt_client = mqtt_client_new();
@@ -58,6 +58,14 @@ bool MQTTManager::createMQTTClient()
 
     mqttInfo.ci.client_id = MQTT_CLIENT_ID;
     mqttInfo.ci.keep_alive = MQTT_CLIENT_KA_TIME;
+    mqttInfo.ci.client_pass = nullptr;
+    mqttInfo.ci.client_user = nullptr;
+    mqttInfo.ci.will_topic = nullptr;
+    mqttInfo.ci.will_msg = nullptr;
+    mqttInfo.ci.will_msg_len = 0;
+    mqttInfo.ci.will_qos = 0;
+    mqttInfo.ci.will_retain = 0;
+
 
     cyw43_arch_lwip_begin(); // voitas tehä myös lock_guardilla = luokka, jonka constructor kutsuu tämän metodin, destructor kutsuu .end()
     const err_t errCon = mqtt_client_connect(
@@ -70,6 +78,7 @@ bool MQTTManager::createMQTTClient()
     );
     cyw43_arch_lwip_end();
 
+    printf("errcon: %d\n", errCon);
     return errCon == ERR_OK;
 }
 
@@ -130,6 +139,7 @@ void MQTTManager::mqttPublishCb(void* arg, err_t result)
 /* MQTT CONNECTION SETUP */
 void MQTTManager::mqttConnectCb(mqtt_client_t* client, void *arg, mqtt_connection_status_t status)
 {
+    printf("CB called with status: %d\n", status);
     if (status != MQTT_CONNECT_ACCEPTED)
     {
         printf("[MQTT-CONNECT-ERROR-CB] --> Connection failed with status: %d\n", status);
