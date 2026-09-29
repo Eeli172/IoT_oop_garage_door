@@ -6,6 +6,7 @@
 /* CUSTOM */
 #include "mqtt.h"
 #include "lwip/apps/mqtt.h"
+#include "../personal_config.h"
 
 #include "../../macros/macros.h"
 #include "pico/cyw43_arch.h"
@@ -46,7 +47,7 @@ bool MQTTManager::initWiFi()
 
 bool MQTTManager::createMQTTClient()
 {
-    IP_ADDR4(&mqttInfo.broker_ip, 106, 101, 168, 192);
+    IP_ADDR4(&mqttInfo.broker_ip, IP_A, IP_B, IP_C, IP_D);
 
     cyw43_arch_lwip_begin(); // mutex lukko
     mqttInfo.mqtt_client = mqtt_client_new();

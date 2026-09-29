@@ -8,6 +8,11 @@
 #define WIFI_PASSWORD ""
 
 #define MQTT_BROKER_IP ""
+#define IP_A 0
+#define IP_B 0
+#define IP_C 0
+#define IP_D 0
+
 
 
 #endif //IOT_OOP_GARAGE_DOOR_PERSONAL_CONFIG_H
