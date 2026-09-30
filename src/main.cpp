@@ -58,6 +58,7 @@ int main()
             if (gpio_get(PIN_SW0) && gpio_get(PIN_SW2))
             {
                 sys.setCalibState(CALIBRATING);
+                sys.subPub(PUBLISH, std::nullopt, "CALIBRATING");
             }
             break;
 
@@ -70,6 +71,7 @@ int main()
             std::cout << "Calibration: finished" << std::endl;
             userButtons->enableInterrupts(std::vector{PIN_SW1});
             sys.setCalibState(CALIBRATED);
+            sys.subPub(PUBLISH, std::nullopt, "CALIBRATED");
             break;
 
 

@@ -10,7 +10,7 @@ typedef enum { CLOSED, IN_BETWEEN, OPEN } doorState_t;
 
 typedef enum { PRE_CALIB, CALIBRATING, CALIBRATED } calibrationState_t;
 
-typedef enum {UNSUBSCRIBE, SUBSCRIBE} mqttSubState_t;
+typedef enum {UNSUBSCRIBE, SUBSCRIBE, PUBLISH} mqttSubState_t;
 
 
 // STRUCTS

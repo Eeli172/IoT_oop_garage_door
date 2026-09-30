@@ -3,8 +3,10 @@
 
 /* STL */
 #include <memory>
+#include <optional>
 
 /* CUSTOM */
+
 #include "../types/types.h"
 #include "mqtt/mqtt.h"
 
@@ -24,8 +26,7 @@ public:
 
     // WIFI + MQTT
     void connectToMQTTServer();
-    void subscribeToTopic(const std::string &topic) const;
-
+    void subPub(const mqttSubState_t &transmissionType, const std::optional<std::string> &topic, const std::optional<std::string> &msg);
     // EEPROM
     void saveSystem();
     void loadSystem();
