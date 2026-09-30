@@ -53,34 +53,34 @@ bool MQTTManager::createMQTTClient()
     mqttInfo.mqtt_client = mqtt_client_new();
     cyw43_arch_lwip_end();
 
-    if (mqttInfo.mqtt_client == nullptr) return false;
 
-    memset(&mqttInfo.ci, 0, sizeof(mqttInfo.ci));
+    if (mqttInfo.mqtt_client != nullptr)
+    {
+        memset(&mqttInfo.ci, 0, sizeof(mqttInfo.ci));
 
-    mqttInfo.ci.client_id = MQTT_CLIENT_ID;
-    mqttInfo.ci.keep_alive = MQTT_CLIENT_KA_TIME;
-    mqttInfo.ci.client_pass = nullptr;
-    mqttInfo.ci.client_user = nullptr;
-    mqttInfo.ci.will_topic = nullptr;
-    mqttInfo.ci.will_msg = nullptr;
-    mqttInfo.ci.will_msg_len = 0;
-    mqttInfo.ci.will_qos = 0;
-    mqttInfo.ci.will_retain = 0;
+        mqttInfo.ci.client_id = MQTT_CLIENT_ID;
+        mqttInfo.ci.keep_alive = MQTT_CLIENT_KA_TIME;
+        mqttInfo.ci.client_pass = NULL;
+        mqttInfo.ci.client_user = NULL;
+        mqttInfo.ci.will_topic = NULL;
 
 
-    cyw43_arch_lwip_begin(); // voitas tehä myös lock_guardilla = luokka, jonka constructor kutsuu tämän metodin, destructor kutsuu .end()
-    const err_t errCon = mqtt_client_connect(
-        mqttInfo.mqtt_client,
-        &mqttInfo.broker_ip,
-        1883,
-        mqttConnectCb,
-        this,
-        &mqttInfo.ci
-    );
-    cyw43_arch_lwip_end();
+        cyw43_arch_lwip_begin(); // voitas tehä myös lock_guardilla = luokka, jonka constructor kutsuu tämän metodin, destructor kutsuu .end()
+        const err_t errCon = mqtt_client_connect(
+            mqttInfo.mqtt_client,
+            &mqttInfo.broker_ip,
+            1883,
+            mqttConnectCb,
+            this,
+            &mqttInfo.ci
+        );
+        cyw43_arch_lwip_end();
 
-    printf("errcon: %d\n", errCon);
-    return errCon == ERR_OK;
+        printf("errcon: %d\n", errCon);
+        return errCon == ERR_OK;
+    }
+
+    return false;
 }
 
 bool MQTTManager::getMQTTStatus()
@@ -106,10 +106,14 @@ void MQTTManager::mqttIncomingDataCb(void *arg, const u8_t *data, u16_t len, u8_
 {
     if (auto *self = static_cast<MQTTManager*>(arg); self)
     {
-        const std::string dataBuffer(reinterpret_cast<const char*>(data), len);
-        self->nextCommandBuffer = dataBuffer;
+        self->nextCommandBuffer.append(reinterpret_cast<const char*>(data), len);
 
         printf("[MQTT-DATA-CB] --> Data received: %s\n", self->nextCommandBuffer.c_str());
+
+        if (flags & MQTT_DATA_FLAG_LAST)
+        {
+            printf("[MQTT-DATA-CB] --> Full message payload received.\n");
+        }
     }
 }
 
@@ -149,7 +153,7 @@ void MQTTManager::mqttConnectCb(mqtt_client_t* client, void *arg, mqtt_connectio
 
     if (auto *self = static_cast<MQTTManager*>(arg); self)
     {
-        mqtt_set_inpub_callback(self->mqttInfo.mqtt_client,
+        mqtt_set_inpub_callback(client,
             mqttIncomingPublishCb,
             mqttIncomingDataCb,
             self);

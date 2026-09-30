@@ -34,7 +34,7 @@ calibrationState_t System::getCalibState() const
 
 
 // MQTT FUNCTIONS
-void System::connectToMQTTServer() const
+void System::connectToMQTTServer()
 {
     // [1]: Attempt to connect to a Wi-Fi.
     if (this->mqttBroker->initWiFi())
@@ -44,7 +44,7 @@ void System::connectToMQTTServer() const
         if (this->mqttBroker->createMQTTClient())
         {
             const absolute_time_t timeout = get_absolute_time();
-            while (!this->mqttBroker->getMQTTStatus() && absolute_time_diff_us(timeout, get_absolute_time()) < 20000000)
+            while (!this->mqttBroker->getMQTTStatus() && absolute_time_diff_us(timeout, get_absolute_time()) < 30000000)
             {
                 cyw43_arch_poll();
                 
@@ -52,7 +52,7 @@ void System::connectToMQTTServer() const
                 
                 cyw43_arch_lwip_end();
                 
-                sleep_ms(1);
+                sleep_ms(10);
             }
 
             if (this->mqttBroker->getMQTTStatus())

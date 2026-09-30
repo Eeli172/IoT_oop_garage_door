@@ -23,7 +23,7 @@ public:
     [[nodiscard]] calibrationState_t getCalibState() const;
 
     // WIFI + MQTT
-    void connectToMQTTServer() const;
+    void connectToMQTTServer();
     void subscribeToTopic(const std::string &topic) const;
 
     // EEPROM
