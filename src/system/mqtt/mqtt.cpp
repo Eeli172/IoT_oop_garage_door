@@ -198,8 +198,7 @@ void MQTTManager::mqttConnectCb(mqtt_client_t* client, void *arg, mqtt_connectio
         else
         {
             self->mqttEnabled = false;
-            printf("[MQTT-CONNECT-ERROR-CB] --> Connection disconnected, trying to re-establish, status: %d\n", status);
-            self->establishMQTTClient();
+            printf("[MQTT-CONNECT-ERROR-CB] --> Connection disconnected, status: %d\n", status);
         }
     }
 }

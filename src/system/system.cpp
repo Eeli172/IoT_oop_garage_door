@@ -66,6 +66,7 @@ void System::connectToMQTTServer()
 void System::subPub(const mqttSubState_t &transmissionType, const std::optional<std::string> &topic, const std::optional<std::string> &msg)
 {
     std::string errorMsg;
+    if (!this->mqttBroker->getMqttStatus()) return;
 
     switch (transmissionType)
     {
