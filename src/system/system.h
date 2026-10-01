@@ -26,7 +26,9 @@ public:
 
     // WIFI + MQTT
     void connectToMQTTServer();
-    void subPub(const mqttSubState_t &transmissionType, const std::optional<std::string> &topic, const std::optional<std::string> &msg);
+    void subPub(const mqttSubState_t &transmissionType, const std::string &topic, const std::optional<std::string> &msg) const;
+    std::string getDriveCommand();
+
     // EEPROM
     void saveSystem();
     void loadSystem();

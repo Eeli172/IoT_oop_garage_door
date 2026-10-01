@@ -19,7 +19,7 @@
 #define MQTT_BROKER_PORT 1883
 #define MQTT_CLIENT_ID "rp2040_gd"
 #define MQTT_CLIENT_KA_TIME 60
-#define MQTT_DEFAULT_TOPIC "garage_door/status"
+#define MQTT_DEFAULT_TOPIC "garage_door/run_instructions"
 #define MQTT_DEFAULT_MSG "<Initialization complete>"
 
 // EEPROM

@@ -58,7 +58,7 @@ int main()
             if (gpio_get(PIN_SW0) && gpio_get(PIN_SW2))
             {
                 sys.setCalibState(CALIBRATING);
-                sys.subPub(PUBLISH, std::nullopt, "CALIBRATING");
+                sys.subPub(PUBLISH, "garage_door/status", "CALIBRATED");
             }
             break;
 
@@ -71,7 +71,7 @@ int main()
             std::cout << "Calibration: finished" << std::endl;
             userButtons->enableInterrupts(std::vector{PIN_SW1});
             sys.setCalibState(CALIBRATED);
-            sys.subPub(PUBLISH, std::nullopt, "CALIBRATED");
+            sys.subPub(PUBLISH, "garage_door/status", "CALIBRATED");
             break;
 
 
@@ -83,7 +83,7 @@ int main()
             {
             case CLOSED:
                 // press sw1 to open
-                if (queue_try_remove(&sw1EventQ, &queueDummy))
+                if (queue_try_remove(&sw1EventQ, &queueDummy) || sys.getDriveCommand() == "RUN")
                 {
                     stepperMotor->setCurrentState(IN_BETWEEN); // PREVIOUS-STATE = CLOSED, CURRENT_STATE = IN_BETWEEN
                 }
@@ -93,7 +93,7 @@ int main()
 
                 if (stepperMotor->isDoorStuck())
                 {
-                    if (queue_try_remove(&sw1EventQ, &queueDummy))
+                    if (queue_try_remove(&sw1EventQ, &queueDummy) || sys.getDriveCommand() == "RUN")
                     {
                         stepperMotor->clearDoorStuck();
                     }
@@ -113,7 +113,7 @@ int main()
 
                 if (stoppedBySw1)
                 {
-                    while (!queue_try_remove(&sw1EventQ, &queueDummy))
+                    while (!queue_try_remove(&sw1EventQ, &queueDummy) || sys.getDriveCommand() == "RUN")
                     {
                     }
                 }
@@ -140,7 +140,7 @@ int main()
 
             case OPEN:
                 // press sw1 to close
-                if (queue_try_remove(&sw1EventQ, &queueDummy))
+                if (queue_try_remove(&sw1EventQ, &queueDummy) || sys.getDriveCommand() == "RUN")
                 {
                     stepperMotor->setCurrentState(IN_BETWEEN); // PREVIOUS-STATE = OPEN, CURRENT_STATE = IN_BETWEEN
                 }

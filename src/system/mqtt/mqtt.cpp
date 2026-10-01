@@ -109,7 +109,9 @@ void MQTTManager::setTopic(const std::string& newTopic)
 
 std::string MQTTManager::getNextCommand()
 {
-    return this->nextCommandBuffer;
+    std::string tempCommandBuffer = this->nextCommandBuffer;
+    this->nextCommandBuffer.clear();
+    return tempCommandBuffer;
 }
 
 void MQTTManager::mqttIncomingPublishCb(void *arg, const char *topic, u32_t tot_len)
