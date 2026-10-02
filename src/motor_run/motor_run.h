@@ -9,6 +9,7 @@
 #include "../types/types.h"
 
 class StatusLeds;
+class System;
 
 class Motor : public std::enable_shared_from_this<Motor>
 {
@@ -19,7 +20,9 @@ public:
         bool valid;
     };
 
-    Motor(const std::vector<int>& coilGpios, bool inverted);
+    Motor(const std::vector<int>& coilGpios, 
+        bool inverted
+    );
     ~Motor() = default;
 
     Motor(const Motor&) = delete;
@@ -51,10 +54,10 @@ public:
     void updateStatusLeds();
 
 
-    doorState_t getCurrentState() const;
-    doorState_t getPreviousState() const;
+    doorState_t getCurrentDoorState() const;
+    doorState_t getPreviousDoorState() const;
 
-    void setCurrentState(const doorState_t& state);
+    void setCurrentDoorState(const doorState_t& state);
 
 private:
 
@@ -73,7 +76,6 @@ private:
     bool errorState;
     bool calibrated;
     bool doorStuck;
-
     int stepsSinceEncoder;
 
 

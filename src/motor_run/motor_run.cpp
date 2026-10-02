@@ -19,13 +19,12 @@ Motor::Motor(
     previousDoorState(CLOSED),
     stepsToEnd(0),
     step(0),
+    motorStepCounter(0),
     direction(true),
     errorState(false),
     calibrated(false),
-    motorStepCounter(0),
-
-    movementCalibration{0.0f, false},
-    doorStuck(false)
+    doorStuck(false),
+    movementCalibration{0.0f, false}
 {
     for (const auto& coilPin : coilGpios)
     {
@@ -307,18 +306,17 @@ bool Motor::isDoorStuck() const
 
 // Door state getters
 
-doorState_t Motor::getCurrentState() const
+doorState_t Motor::getCurrentDoorState() const
 {
     return currentDoorState;
 }
 
-doorState_t Motor::getPreviousState() const
+doorState_t Motor::getPreviousDoorState() const
 {
     return previousDoorState;
 }
 
-void Motor::setCurrentState(
-    const doorState_t& state)
+void Motor::setCurrentDoorState(const doorState_t& state)
 {
     previousDoorState =
         currentDoorState;

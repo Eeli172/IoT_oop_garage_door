@@ -32,7 +32,7 @@ void StatusLeds::updateCall() {
 }
 void StatusLeds::getStates() {
     if (auto motorPtr = this->motor.lock()) {
-        this->doorState = motorPtr->getCurrentState();
+        this->doorState = motorPtr->getCurrentDoorState();
         this->errorState = motorPtr->getErrorState();
     }
 }

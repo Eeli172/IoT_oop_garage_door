@@ -6,9 +6,10 @@
 #include <optional>
 
 /* CUSTOM */
-
 #include "../types/types.h"
+#include "eeprom/eeprom.h"
 #include "mqtt/mqtt.h"
+#include "../motor_run/motor_run.h"
 
 /* SYSTEM */
 // SYSTEM MAIN CLASS
@@ -20,23 +21,27 @@ public:
     ~System() = default;
 
     void setCalibState(const calibrationState_t &state);
-    void setDoorState(const doorState_t &state);
 
     [[nodiscard]] calibrationState_t getCalibState() const;
 
-    // WIFI + MQTT
+    // MQTT
     void connectToMQTTServer();
     void subPub(const mqttSubState_t &transmissionType, const std::string &topic, const std::optional<std::string> &msg) const;
     std::string getDriveCommand();
 
     // EEPROM
-    void saveSystem();
+    void saveSystem(uint16_t addr);
     void loadSystem();
+
+    // ADD MOTOR
+    void addMotor(std::shared_ptr<Motor> mtr);
 
 private:
     doorState_t doorState;
     calibrationState_t calibState;
     std::unique_ptr<MQTTManager> mqttBroker;
+    std::unique_ptr<Eeprom> eeprom;
+    std::shared_ptr<Motor> motor;
 };
 
 #endif //GARAGE_DOOR_SYS_H

@@ -1,15 +1,21 @@
 /* STL */
 #include <iostream>
+#include <memory>
+#include <ostream>
 
 /* CUSTOM */
 #include "system.h"
+#include "eeprom/eeprom.h"
 
 #include "pico/cyw43_arch.h"
 #include "pico/time.h"
+#include "types/types.h"
 
 
 System::System() :
-doorState(CLOSED), calibState(PRE_CALIB), mqttBroker(std::make_unique<MQTTManager>())
+calibState(PRE_CALIB), 
+mqttBroker(std::make_unique<MQTTManager>()),
+eeprom(std::make_unique<Eeprom>())
 {}
 
 
@@ -17,12 +23,7 @@ doorState(CLOSED), calibState(PRE_CALIB), mqttBroker(std::make_unique<MQTTManage
 void System::setCalibState(const calibrationState_t& state)
 {
     this->calibState = state;
-}
-
-
-void System::setDoorState(const doorState_t &state)
-{
-    this->doorState = state;
+    this->saveSystem(EEPROM_ADDR_CALIBRATION_STATE);
 }
 
 
@@ -109,4 +110,50 @@ void System::subPub(const mqttSubState_t &transmissionType, const std::string &t
 std::string System::getDriveCommand()
 {
     return this->mqttBroker->getNextCommand();
+}
+
+
+
+void System::saveSystem(uint16_t addr) {
+    int temp{0};
+
+    switch (addr) {
+        case EEPROM_ADDR_CALIBRATION_STATE:
+            temp = (int) this->getCalibState();
+            break;
+            
+        case EEPROM_ADDR_DOOR_STATE:
+            temp = (int) this->motor->getCurrentDoorState();
+            break;
+            
+        default:
+            std::cerr << "[ERROR-SYSTEM-SAVE] --> invalid memory address" << std::endl;
+    }
+
+    if (this->eeprom->write(addr, temp)) {
+        std::cerr << "[ERROR-SYSTEM-SAVE] --> Failed saving" << std::endl;
+    }
+}
+
+void System::loadSystem() {
+    int temp{0};
+
+    if (this->eeprom->read(EEPROM_ADDR_CALIBRATION_STATE, &temp)) {
+        std::cout << "[SYS-LOAD-CALIB_STATE] --> previous value not found" << std::endl;
+        return;
+    }
+    std::cout << "[SYS-LOAD-CALIB_STATE] --> previous value found" << std::endl;
+    this->setCalibState((calibrationState_t) temp);
+
+    if (this->eeprom->read(EEPROM_ADDR_DOOR_STATE, &temp)) {
+        std::cout << "[SYS-LOAD-DOOR_STATE] --> previous value not found" << std::endl;
+        return;
+    }
+    std::cout << "[SYS-LOAD-DOOR_STATE] --> previous value found" << std::endl;
+    this->motor->setCurrentDoorState((doorState_t) temp);
+}
+
+
+void System::addMotor(std::shared_ptr<Motor> mtr) {
+    this->motor = mtr;
 }

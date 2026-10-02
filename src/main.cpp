@@ -24,12 +24,8 @@ int main()
     stdio_init_all();
     sleep_ms(500);
     std::cout << "\n BOOT\n" << std::endl;
-
-
+    
     System sys;
-    bool queueDummy;
-    bool stoppedBySw1;
-
     const auto stepperMotor = std::make_shared<Motor>(
         std::vector{PIN_COIL_1, PIN_COIL_2, PIN_COIL_3, PIN_COIL_4}, false
     );
@@ -42,25 +38,33 @@ int main()
     const auto encoder = std::make_unique<Encoder>(
         PIN_ENCODER_A, PIN_ENCODER_B, false
     );
+    
 
+    /*
+    sys.addMotor(stepperMotor);
+    sys.loadSystem();
+    */
+
+    
     initQueues();
     encoder->enableInterrupts();
     stepperMotor->createStatusLeds();
-
-
     sys.connectToMQTTServer();
-
+    
+    
+    bool queueDummy;
+    bool stoppedBySw1;
     while (true)
     {
         switch (sys.getCalibState())
         {
         case PRE_CALIB:
-            if (gpio_get(PIN_SW0) && gpio_get(PIN_SW2))
-            {
-                sys.setCalibState(CALIBRATING);
-                sys.subPub(PUBLISH, "garage_door/status", "CALIBRATED");
-            }
-            break;
+        if (gpio_get(PIN_SW0) && gpio_get(PIN_SW2))
+        {
+            sys.setCalibState(CALIBRATING);
+            sys.subPub(PUBLISH, "garage_door/status", "CALIBRATED");
+        }
+        break;
 
 
         case CALIBRATING:
@@ -79,13 +83,13 @@ int main()
 
             stepperMotor->updateStatusLeds();
 
-            switch (stepperMotor->getCurrentState())
+            switch (stepperMotor->getCurrentDoorState())
             {
             case CLOSED:
                 // press sw1 to open
                 if (queue_try_remove(&sw1EventQ, &queueDummy) || sys.getDriveCommand() == "RUN")
                 {
-                    stepperMotor->setCurrentState(IN_BETWEEN); // PREVIOUS-STATE = CLOSED, CURRENT_STATE = IN_BETWEEN
+                    stepperMotor->setCurrentDoorState(IN_BETWEEN); // PREVIOUS-STATE = CLOSED, CURRENT_STATE = IN_BETWEEN
                 }
                 break;
 
@@ -119,20 +123,20 @@ int main()
                 }
                 else
                 {
-                    if (stepperMotor->getPreviousState() == CLOSED &&
+                    if (stepperMotor->getPreviousDoorState() == CLOSED &&
                         !stepperMotor->getDirection())
                     {
-                        stepperMotor->setCurrentState(OPEN);
+                        stepperMotor->setCurrentDoorState(OPEN);
                     }
-                    else if (stepperMotor->getPreviousState() == OPEN &&
+                    else if (stepperMotor->getPreviousDoorState() == OPEN &&
                         stepperMotor->getDirection())
                     {
-                        stepperMotor->setCurrentState(CLOSED);
+                        stepperMotor->setCurrentDoorState(CLOSED);
                     }
                     else
                     {
-                        stepperMotor->setCurrentState(
-                            stepperMotor->getPreviousState());
+                        stepperMotor->setCurrentDoorState(
+                            stepperMotor->getPreviousDoorState());
                     }
                 }
 
@@ -142,7 +146,7 @@ int main()
                 // press sw1 to close
                 if (queue_try_remove(&sw1EventQ, &queueDummy) || sys.getDriveCommand() == "RUN")
                 {
-                    stepperMotor->setCurrentState(IN_BETWEEN); // PREVIOUS-STATE = OPEN, CURRENT_STATE = IN_BETWEEN
+                    stepperMotor->setCurrentDoorState(IN_BETWEEN); // PREVIOUS-STATE = OPEN, CURRENT_STATE = IN_BETWEEN
                 }
                 break;
             }

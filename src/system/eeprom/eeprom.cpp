@@ -1,9 +1,14 @@
 #include "eeprom.h"
 #include "hardware/i2c.h"
 #include "types/types.h"
+#include <hardware/gpio.h>
+#include <hardware/structs/io_bank0.h>
 #include <iostream>
 
 
+Eeprom::Eeprom() {
+    init_i2c_hw();
+}
 
 
 int Eeprom::write(const uint16_t address, const uint data)
@@ -11,9 +16,10 @@ int Eeprom::write(const uint16_t address, const uint data)
     payload_control_t payload;
     payload.data_length = count_bytes(data);
     payload.data_length *= 2; // original and inverted values
-    
+    printf("WR: 1\n");
     if (payload.data_length == EEPROM_BYTES)
     {
+    printf("WR: 2\n");
         payload.data_array[0] = (uint8_t)data;
         payload.data_array[1] = ~payload.data_array[0];
     }
@@ -24,20 +30,23 @@ int Eeprom::write(const uint16_t address, const uint data)
     }
     
     package_data(payload.data_array, payload.data_length, payload.payload_array, address);
+    printf("WR: 3\n");
     payload.payload_length = payload.data_length + ADDRESS_BYTES;
     
     if (save_data(payload.payload_array, payload.payload_length) != payload.payload_length)
     {
+    printf("WR: 4\n");
         printf("[ERROR] --> Program Eeprom save failed at MEM_ADD: %X\n", address);
         return -1;
     }
+    printf("WR: 5\n");
     
     return 0;
 }
-int Eeprom::read(int* value, uint16_t eeprom_address) {
+int Eeprom::read(uint16_t addr, int* value) {
     const uint8_t memory_address[ADDRESS_BYTES] = {
-        static_cast<uint8_t>(eeprom_address >> 8 & 0xFF), 
-        static_cast<uint8_t>(eeprom_address & 0xFF)
+        static_cast<uint8_t>(addr >> 8 & 0xFF), 
+        static_cast<uint8_t>(addr & 0xFF)
     };
     uint8_t data_array[EEPROM_BYTES];
 
@@ -56,6 +65,16 @@ int Eeprom::read(int* value, uint16_t eeprom_address) {
 }
 
 
+void Eeprom::init_i2c_hw() {
+    i2c_init(I2C_PORT, I2C_FREQ);
+
+    gpio_set_function(PIN_I2C_SDA, GPIO_FUNC_I2C);
+    gpio_set_function(PIN_I2C_SCL, GPIO_FUNC_I2C);
+
+    gpio_pull_up(PIN_I2C_SDA);
+    gpio_pull_up(PIN_I2C_SCL);
+}
+
 uint Eeprom::package_data(const uint8_t* data_array, const uint data_array_length, uint8_t* payload_array,
                   const uint16_t memory_address)
 {
@@ -71,8 +90,12 @@ uint Eeprom::package_data(const uint8_t* data_array, const uint data_array_lengt
 }
 uint Eeprom::save_data(const uint8_t* payload, const uint len)
 {
+    printf("SD: 1\n");
+
     const uint bytes_written = i2c_write_blocking(I2C_PORT, I2C_ADDR_EEPROM, payload, len, false);
+    printf("SD: 2\n");
     ack_polling_with_timeout(EEPROM_ACK_TIMEOUT_US);
+    printf("SD: 3\n");
 
     return bytes_written;
 }

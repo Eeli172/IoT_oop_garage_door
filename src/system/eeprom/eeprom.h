@@ -6,10 +6,12 @@
 
 class Eeprom {
 public:
-    int write(uint16_t address, uint data);
-    int read(int* value, uint16_t eeprom_address);
+    Eeprom();
+    int write(uint16_t addr, uint data);
+    int read(uint16_t addr, int* value);
     
 private:
+    void init_i2c_hw();
     uint package_data(const uint8_t* data_array, uint data_array_length, uint8_t* payload_array, uint16_t memory_address);
     uint save_data(const uint8_t* payload, uint len);
     uint read_data(uint8_t* data, uint len, const uint8_t* addr);
