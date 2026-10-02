@@ -4,6 +4,7 @@
 #include "../wifi/wifi.h"
 #include "types/types.h"
 #include <string>
+#include <array>
 
 class MQTTManager
 {
@@ -39,11 +40,13 @@ class MQTTManager
     std::string getNextCommand();
 
     private:
+    void getBrokerIpOctets() const;
     /* WIFI + HARDWARE ATTRIBUTES */
     WIFI wiFiManager;
     bool hardwareEnabled;
 
     /* MQTT ATTRIBUTES */
+    std::array<int, IP_OCTETS> brokerIpOctets;
     bool mqttEnabled;
     bool mqttSubPubStatus;
 

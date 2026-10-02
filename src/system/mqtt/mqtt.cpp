@@ -18,7 +18,9 @@ MQTTManager::MQTTManager() :
 wiFiManager(WIFI()), hardwareEnabled(false), mqttEnabled(false),
 mqttSubPubStatus(false),
 currentTopic(MQTT_DEFAULT_TOPIC)
-{}
+{
+    this->getBrokerIpOctets();
+}
 
 bool MQTTManager::initWiFi()
 {
@@ -54,7 +56,7 @@ bool MQTTManager::establishMQTTClient()
 
     if (mqttInfo.mqtt_client != nullptr)
     {
-        IP_ADDR4(&mqttInfo.broker_ip, IP_A, IP_B, IP_C, IP_D);
+        IP_ADDR4(&mqttInfo.broker_ip, brokerIpOctets[0], brokerIpOctets[1], brokerIpOctets[2], brokerIpOctets[3]);
 
         memset(&mqttInfo.ci, 0, sizeof(mqttInfo.ci));
 
@@ -241,4 +243,15 @@ bool MQTTManager::publishToTopic(const std::string &msg)
     }
 
     return true;
+}
+
+
+void MQTTManager::getBrokerIpOctets() const {
+    const char* ipStr = MQTT_BROKER_IP;
+    sscanf(ipStr, "%d.%d.%d.%d", 
+        &this->brokerIpOctets[0], 
+        &this->brokerIpOctets[1], 
+        &this->brokerIpOctets[2], 
+        &this->brokerIpOctets[3]
+    );
 }
