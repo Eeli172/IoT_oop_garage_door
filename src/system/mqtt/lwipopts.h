@@ -91,6 +91,6 @@
 #define MEMP_NUM_SYS_TIMEOUT        (LWIP_NUM_SYS_TIMEOUT_INTERNAL + 1)
 
 
-#define MEMP_NUM_SYS_TIMEOUT 16
+//#define MEMP_NUM_SYS_TIMEOUT 16
 
 #endif /* __LWIPOPTS_H__ */
