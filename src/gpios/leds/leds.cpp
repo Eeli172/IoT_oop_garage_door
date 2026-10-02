@@ -5,13 +5,13 @@
 
 #include "leds.h"
 #include "../../macros/macros.h"
-#include "../../motor_run/motor_run.h"
+#include "system/system.h"
 
 
 
 // SYSTEM STATUS LEDS
-StatusLeds::StatusLeds(const std::vector<int> &ledGpios, std::weak_ptr<Motor> mtr) : 
-    motor(mtr),
+StatusLeds::StatusLeds(const std::vector<int> &ledGpios, const std::weak_ptr<System> &sys) :
+    system(sys),
     doorState(CLOSED), 
     errorState(false),
     ledValue(false), 
@@ -31,9 +31,12 @@ void StatusLeds::updateCall() {
     this->updateLeds();
 }
 void StatusLeds::getStates() {
-    if (auto motorPtr = this->motor.lock()) {
-        this->doorState = motorPtr->getCurrentDoorState();
-        this->errorState = motorPtr->getErrorState();
+    if (const auto &systemPtr = this->system.lock()) { // TÄSSÄ VIRHE, ei saada palautettua .lock() shared_ptria systemistä
+        this->doorState = systemPtr->getCurrentDoorState();
+        this->errorState = systemPtr->getDoorErrorState();
+        printf("DOOR_STATE: %d\n", this->doorState);
+        printf("ERROR_STATE: %d\n", this->errorState);
+
     }
 }
 void StatusLeds::toggleValue() {

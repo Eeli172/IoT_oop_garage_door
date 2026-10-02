@@ -17,7 +17,7 @@
 MQTTManager::MQTTManager() :
 wiFiManager(WIFI()), hardwareEnabled(false), mqttEnabled(false),
 mqttSubPubStatus(false),
-currentTopic(MQTT_DEFAULT_TOPIC)
+currentTopic(MQTT_TOPIC_RUN_INSTRUCTIONS)
 {
     this->getBrokerIpOctets();
 }
@@ -50,7 +50,7 @@ bool MQTTManager::initWiFi()
 
 bool MQTTManager::establishMQTTClient()
 {
-    cyw43_arch_lwip_begin(); // mutex lukko
+    cyw43_arch_lwip_begin();
     mqttInfo.mqtt_client = mqtt_client_new();
     cyw43_arch_lwip_end();
 
@@ -66,7 +66,7 @@ bool MQTTManager::establishMQTTClient()
         mqttInfo.ci.client_user = NULL;
         mqttInfo.ci.will_topic = NULL;
 
-        cyw43_arch_lwip_begin(); // voitas tehä myös lock_guardilla = luokka, jonka constructor kutsuu tämän metodin, destructor kutsuu .end()
+        cyw43_arch_lwip_begin();
         const err_t errCon = mqtt_client_connect(
             mqttInfo.mqtt_client,
             &mqttInfo.broker_ip,
@@ -193,7 +193,7 @@ void MQTTManager::mqttConnectCb(mqtt_client_t* client, void *arg, mqtt_connectio
 
             // [2.] Subscribe to a default topic.
             mqtt_sub_unsub(client,
-                MQTT_DEFAULT_TOPIC,
+                MQTT_TOPIC_RUN_INSTRUCTIONS,
                 1, mqttSubscribeCb,
                 self,
                 SUBSCRIBE);

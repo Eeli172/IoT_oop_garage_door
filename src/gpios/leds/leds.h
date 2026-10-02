@@ -8,13 +8,12 @@
 #include "../gpios.h"
 #include "../../types/types.h"
 
-class Motor;
-
+class System;
 
 // LED HUB (GPIO: 20, 21, 22)
 class StatusLeds {
 public:
-    StatusLeds(const std::vector<int> &ledGpios, std::weak_ptr<Motor> mtr);
+    StatusLeds(const std::vector<int> &ledGpios, const std::weak_ptr<System> &sys);
     StatusLeds(const StatusLeds &) = delete;
     ~StatusLeds() = default;
 
@@ -26,7 +25,7 @@ public:
 
 private:
     std::vector<std::unique_ptr<CommonGPIO>> ledGpios;
-    std::weak_ptr<Motor> motor;
+    std::weak_ptr<System> system;
 
     doorState_t doorState;
     bool errorState;

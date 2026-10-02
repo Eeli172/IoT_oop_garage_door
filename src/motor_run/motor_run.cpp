@@ -11,19 +11,15 @@
 #include "pico/util/queue.h"
 
 
-
 Motor::Motor(
     const std::vector<int>& coilGpios,
     bool inverted) :
-    currentDoorState(CLOSED),
-    previousDoorState(CLOSED),
-    stepsToEnd(0),
     step(0),
     motorStepCounter(0),
     direction(true),
-    errorState(false),
+    errorState(false), // Yhistä errorstate & door stuck muuttujat samaksi ?
     calibrated(false),
-    doorStuck(false),
+    doorStuck(false), // Yhistä errorstate & door stuck muuttujat samaksi ?
     movementCalibration{0.0f, false}
 {
     for (const auto& coilPin : coilGpios)
@@ -276,51 +272,8 @@ bool Motor::getErrorState() const
 }
 
 
-void Motor::createStatusLeds()
-{
-    statusLeds =
-        std::make_shared<StatusLeds>(
-            std::vector{
-                PIN_LED_1,
-                PIN_LED_2,
-                PIN_LED_3
-            },
-            weak_from_this());
-}
-
-void Motor::updateStatusLeds()
-{
-    statusLeds->updateCall();
-}
-
-
-
 // Door stuck status
 bool Motor::isDoorStuck() const
 {
     return doorStuck;
-}
-
-
-
-
-// Door state getters
-
-doorState_t Motor::getCurrentDoorState() const
-{
-    return currentDoorState;
-}
-
-doorState_t Motor::getPreviousDoorState() const
-{
-    return previousDoorState;
-}
-
-void Motor::setCurrentDoorState(const doorState_t& state)
-{
-    previousDoorState =
-        currentDoorState;
-
-    currentDoorState =
-        state;
 }

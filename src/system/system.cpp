@@ -6,6 +6,7 @@
 /* CUSTOM */
 #include "system.h"
 #include "eeprom/eeprom.h"
+#include "gpios/leds/leds.h"
 
 #include "pico/cyw43_arch.h"
 #include "pico/time.h"
@@ -13,7 +14,9 @@
 
 
 System::System() :
-calibState(PRE_CALIB), 
+calibState(PRE_CALIB),
+currentDoorState(CLOSED),
+previousDoorState(CLOSED),
 mqttBroker(std::make_unique<MQTTManager>()),
 eeprom(std::make_unique<Eeprom>())
 {}
@@ -23,7 +26,18 @@ eeprom(std::make_unique<Eeprom>())
 void System::setCalibState(const calibrationState_t& state)
 {
     this->calibState = state;
-    this->saveSystem(EEPROM_ADDR_CALIBRATION_STATE);
+    // this->saveSystem(EEPROM_ADDR_CALIBRATION_STATE);
+}
+
+void System::setCurrentDoorState(const doorState_t& state)
+{
+    previousDoorState = currentDoorState;
+    currentDoorState = state;
+}
+
+void System::setMotor(const std::shared_ptr<Motor> &Mtr)
+{
+    this->motor = Mtr;
 }
 
 
@@ -33,8 +47,23 @@ calibrationState_t System::getCalibState() const
     return this->calibState;
 }
 
+bool System::getDoorErrorState() const
+{
+    return this->motor->getErrorState();
+}
 
-// MQTT FUNCTIONS
+doorState_t System::getCurrentDoorState() const
+{
+    return currentDoorState;
+}
+
+doorState_t System::getPreviousDoorState() const
+{
+    return previousDoorState;
+}
+
+
+/* MQTT INTERFACE */
 void System::connectToMQTTServer()
 {
     // [1]: Attempt to connect to a Wi-Fi.
@@ -113,19 +142,19 @@ std::string System::getDriveCommand()
 }
 
 
-
+/* EEPROM INTERFACE */
 void System::saveSystem(uint16_t addr) {
     int temp{0};
 
     switch (addr) {
         case EEPROM_ADDR_CALIBRATION_STATE:
-            temp = (int) this->getCalibState();
+            temp = static_cast<int>(this->getCalibState());
             break;
-            
+
         case EEPROM_ADDR_DOOR_STATE:
-            temp = (int) this->motor->getCurrentDoorState();
+            temp = static_cast<int>(getCurrentDoorState());
             break;
-            
+
         default:
             std::cerr << "[ERROR-SYSTEM-SAVE] --> invalid memory address" << std::endl;
     }
@@ -150,10 +179,25 @@ void System::loadSystem() {
         return;
     }
     std::cout << "[SYS-LOAD-DOOR_STATE] --> previous value found" << std::endl;
-    this->motor->setCurrentDoorState((doorState_t) temp);
+    setCurrentDoorState((doorState_t) temp);
 }
 
 
-void System::addMotor(std::shared_ptr<Motor> mtr) {
-    this->motor = mtr;
+/* STATUS LEDS INTERFACE */
+void System::createStatusLeds()
+{
+    this->statusLeds =
+        std::make_shared<StatusLeds>(
+        std::vector{
+            PIN_LED_1,
+            PIN_LED_2,
+            PIN_LED_3
+        }, weak_from_this());
+}
+
+void System::updateStatusLeds() const
+{
+    printf("DOOR_STATE [SYS]: %d\n", this->currentDoorState);
+    printf("ERROR_STATE [SYS]: %d\n", this->motor->getErrorState());
+    statusLeds->updateCall();
 }
