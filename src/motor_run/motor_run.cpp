@@ -16,9 +16,8 @@ Motor::Motor(
     step(0),
     motorStepCounter(0),
     direction(true),
-    errorState(false), // Yhistä errorstate & door stuck muuttujat samaksi ?
+    errorState(false),
     calibrated(false),
-    doorStuck(false), // Yhistä errorstate & door stuck muuttujat samaksi ?
     movementCalibration{0.0f, false}
 {
     for (const auto& coilPin : coilGpios)
@@ -105,13 +104,22 @@ bool Motor::runMotor(Encoder& encoder)
 
     motorStepCounter = 0;
     stepsSinceEncoder = 0;
-    doorStuck = false;
     errorState = false;
 
     reverseOnPressedLimitSwitch();
 
-    while (((direction && !lmswEncStop) || (!direction && !lmswMtrStop)) && !sw1Stop && !errorState)
+    while (((direction && !lmswEncStop) ||
+        (!direction && !lmswMtrStop)) &&
+       !sw1Stop &&
+       !errorState)
     {
+        queue_try_remove(&sw1EventQ, &sw1Stop);
+
+        if (sw1Stop)
+        {
+            break;
+        }
+
         runMotorSteps();
 
         sleep_ms(MOTOR_STEP_DELAY_MS);
@@ -129,7 +137,6 @@ bool Motor::runMotor(Encoder& encoder)
             checkForStuck();
         }
 
-        queue_try_remove(&sw1EventQ, &sw1Stop);
         queue_try_remove(&lmswMtrEventQ, &lmswMtrStop);
         queue_try_remove(&lmswEncEventQ, &lmswEncStop);
     }
@@ -138,7 +145,6 @@ bool Motor::runMotor(Encoder& encoder)
 
     if (errorState)
     {
-        doorStuck = true;
         return false;
     }
 
@@ -159,7 +165,6 @@ void Motor::calibrateMotor(Encoder& encoder)
 {
     calibrated = false;
     errorState = false;
-    doorStuck = false;
 
     float totalRatio = 0.0f;
     bool calibrationValid = true;
@@ -255,9 +260,8 @@ void Motor::checkForStuck()
 
 
 //used in main and sets steps to 0
-void Motor::clearDoorStuck()
+void Motor::clearErrorState()
 {
-    doorStuck = false;
     errorState = false;
     stepsSinceEncoder = 0;
 }
@@ -271,8 +275,3 @@ bool Motor::getErrorState() const
 }
 
 
-// Door stuck status
-bool Motor::isDoorStuck() const
-{
-    return doorStuck;
-}

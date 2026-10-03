@@ -22,20 +22,22 @@ public:
     ~System() = default;
 
     /* SYSTEM SETTERS */
-    void setCalibState(const calibrationState_t &state);
+    void setCalibState(const calibrationState_t& state);
     void setCurrentDoorState(const doorState_t& state);
-
+    void setWaitingForCommand(bool waiting);
 
     /* SYSTEM GETTERS */
     [[nodiscard]] calibrationState_t getCalibState() const;
     [[nodiscard]] bool getDoorErrorState() const;
     [[nodiscard]] doorState_t getPreviousDoorState() const;
     [[nodiscard]] doorState_t getCurrentDoorState() const;
+    [[nodiscard]] bool isWaitingForCommand() const;
 
     /* IO DEVICES*/
     // MQTT
     void connectToMQTTServer();
-    void subPub(const mqttSubState_t &transmissionType, const std::string &topic, const std::optional<std::string> &msg) const;
+    void subPub(const mqttSubState_t& transmissionType, const std::string& topic,
+                const std::optional<std::string>& msg) const;
     std::string getDriveCommand();
 
 
@@ -45,19 +47,19 @@ public:
 
 
     // MOTOR
-    void setMotor(const std::shared_ptr<Motor> &Mtr);
+    void setMotor(const std::shared_ptr<Motor>& Mtr);
 
 
     // STATUS LEDS
     void createStatusLeds();
     void updateStatusLeds() const;
 
-
 private:
     /* SYSTEM STATES */
     calibrationState_t calibState;
     doorState_t currentDoorState;
     doorState_t previousDoorState;
+    bool waitingForCommand = false;
 
 
     /* SYSTEM IO DEVICES */

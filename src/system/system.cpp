@@ -62,7 +62,15 @@ doorState_t System::getPreviousDoorState() const
     return previousDoorState;
 }
 
+bool System::isWaitingForCommand() const
+{
+    return waitingForCommand;
+}
 
+void System::setWaitingForCommand(bool waiting)
+{
+    waitingForCommand = waiting;
+}
 /* MQTT INTERFACE */
 void System::connectToMQTTServer()
 {

@@ -23,7 +23,7 @@ int main()
     stdio_init_all();
     sleep_ms(500);
     std::cout << "\n BOOT\n" << std::endl;
-    
+
     const auto sys = std::make_shared<System>();
     const auto stepperMotor = std::make_shared<Motor>(
         std::vector{PIN_COIL_1, PIN_COIL_2, PIN_COIL_3, PIN_COIL_4}, false
@@ -37,21 +37,21 @@ int main()
     const auto encoder = std::make_unique<Encoder>(
         PIN_ENCODER_A, PIN_ENCODER_B, false
     );
-    
+
 
     /*
     sys.addMotor(stepperMotor);
     sys.loadSystem();
     */
 
-    
+
     initQueues();
     encoder->enableInterrupts();
     sys->createStatusLeds();
     sys->setMotor(stepperMotor);
     sys->connectToMQTTServer();
-    
-    
+
+
     bool queueDummy;
     bool stoppedBySw1;
 
@@ -60,11 +60,11 @@ int main()
         switch (sys->getCalibState())
         {
         case PRE_CALIB:
-        if (gpio_get(PIN_SW0) && gpio_get(PIN_SW2))
-        {
-            sys->setCalibState(CALIBRATING);
-        }
-        break;
+            if (gpio_get(PIN_SW0) && gpio_get(PIN_SW2))
+            {
+                sys->setCalibState(CALIBRATING);
+            }
+            break;
 
 
         case CALIBRATING:
@@ -94,13 +94,19 @@ int main()
                 }
                 break;
 
-            case IN_BETWEEN: // Saadaanko selkeemmäks logiikkaa
+            case IN_BETWEEN:
 
-                if (stepperMotor->isDoorStuck())
+                // Door is stopped because of STUCK or SW1.
+                if (sys->isWaitingForCommand())
                 {
-                    if (queue_try_remove(&sw1EventQ, &queueDummy) || sys->getDriveCommand() == "REVERSE")
+                    if (queue_try_remove(&sw1EventQ, &queueDummy) ||
+                        sys->getDriveCommand() == "RUN" ||
+                        sys->getDriveCommand() == "REVERSE") // en kyl oo varma miten tää toimisi
                     {
-                        stepperMotor->clearDoorStuck();
+                        // printf("continue with sw1\n");
+
+                        sys->setWaitingForCommand(false);
+                        stepperMotor->clearErrorState();
                     }
                     else
                     {
@@ -110,37 +116,49 @@ int main()
 
                 stoppedBySw1 = stepperMotor->runMotor(*encoder);
 
-
-                if (stepperMotor->isDoorStuck())
+                // Motor detected a stuck door.
+                if (stepperMotor->getErrorState())
                 {
+                    //  printf("STUCK in between\n");
+                    sys->subPub(
+                        PUBLISH,
+                        MQTT_TOPIC_DOOR_STATE,
+                        "STUCK"
+                    );
+
+                    sys->setWaitingForCommand(true);
                     break;
                 }
 
+                // Motor was stopped by SW1.
                 if (stoppedBySw1)
                 {
-                    while (!queue_try_remove(&sw1EventQ, &queueDummy) || sys->getDriveCommand() == "RUN")
-                    {} // Keksitäänkö tapa jolla ei tarvii blokata?
+                    //  printf("stopped by SW1 \n");
+                    sys->setWaitingForCommand(true);
+                    break;
+                }
+
+                // Motor reached a limit switch.
+                if (sys->getPreviousDoorState() == CLOSED &&
+                    !stepperMotor->getDirection())
+                {
+                    sys->setCurrentDoorState(OPEN);
+                    sys->subPub(PUBLISH, MQTT_TOPIC_DOOR_STATE, "OPEN");
+                }
+                else if (sys->getPreviousDoorState() == OPEN &&
+                    stepperMotor->getDirection())
+                {
+                    sys->setCurrentDoorState(CLOSED);
+                    sys->subPub(PUBLISH, MQTT_TOPIC_DOOR_STATE, "CLOSED");
                 }
                 else
                 {
-                    if (sys->getPreviousDoorState() == CLOSED &&
-                        !stepperMotor->getDirection())
-                    {
-                        sys->setCurrentDoorState(OPEN);
-                        sys->subPub(PUBLISH, MQTT_TOPIC_DOOR_STATE, "OPEN");
-                    }
-                    else if (sys->getPreviousDoorState() == OPEN &&
-                        stepperMotor->getDirection())
-                    {
-                        sys->setCurrentDoorState(CLOSED);
-                        sys->subPub(PUBLISH, MQTT_TOPIC_DOOR_STATE, "CLOSED");
-                    }
-                    else
-                    {
-                        sys->setCurrentDoorState(sys->getPreviousDoorState());
-                    }
+                    // Door was reversed and reached the same limit.
+                    sys->setCurrentDoorState(sys->getPreviousDoorState());
                 }
+
                 break;
+
 
             case OPEN:
                 // press sw1 to close

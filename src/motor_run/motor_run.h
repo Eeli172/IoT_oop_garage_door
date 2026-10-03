@@ -34,8 +34,7 @@ public:
 
     void calibrateMotor(Encoder& encoder);
 
-    bool isDoorStuck() const;
-    void clearDoorStuck();
+    void clearErrorState();
     bool getErrorState() const;
 
 private:
@@ -49,7 +48,6 @@ private:
     bool direction;
     bool errorState;
     bool calibrated;
-    bool doorStuck;
     int stepsSinceEncoder;
 
 
