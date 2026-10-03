@@ -31,12 +31,9 @@ void StatusLeds::updateCall() {
     this->updateLeds();
 }
 void StatusLeds::getStates() {
-    if (const auto &systemPtr = this->system.lock()) { // TÄSSÄ VIRHE, ei saada palautettua .lock() shared_ptria systemistä
+    if (auto systemPtr = this->system.lock()) {
         this->doorState = systemPtr->getCurrentDoorState();
         this->errorState = systemPtr->getDoorErrorState();
-        printf("DOOR_STATE: %d\n", this->doorState);
-        printf("ERROR_STATE: %d\n", this->errorState);
-
     }
 }
 void StatusLeds::toggleValue() {

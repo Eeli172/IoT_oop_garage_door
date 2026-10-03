@@ -5,7 +5,6 @@
 
 #include "../interrupts/interrupts.h"
 #include "../macros/macros.h"
-#include "../gpios/leds/leds.h"
 
 #include "hardware/gpio.h"
 #include "pico/util/queue.h"

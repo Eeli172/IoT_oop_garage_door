@@ -197,7 +197,5 @@ void System::createStatusLeds()
 
 void System::updateStatusLeds() const
 {
-    printf("DOOR_STATE [SYS]: %d\n", this->currentDoorState);
-    printf("ERROR_STATE [SYS]: %d\n", this->motor->getErrorState());
     statusLeds->updateCall();
 }

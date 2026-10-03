@@ -24,7 +24,7 @@ int main()
     sleep_ms(500);
     std::cout << "\n BOOT\n" << std::endl;
     
-    System sys;
+    const auto sys = std::make_shared<System>();
     const auto stepperMotor = std::make_shared<Motor>(
         std::vector{PIN_COIL_1, PIN_COIL_2, PIN_COIL_3, PIN_COIL_4}, false
     );
@@ -47,9 +47,9 @@ int main()
     
     initQueues();
     encoder->enableInterrupts();
-    sys.createStatusLeds();
-    sys.setMotor(stepperMotor);
-    sys.connectToMQTTServer();
+    sys->createStatusLeds();
+    sys->setMotor(stepperMotor);
+    sys->connectToMQTTServer();
     
     
     bool queueDummy;
@@ -57,12 +57,12 @@ int main()
 
     while (true)
     {
-        switch (sys.getCalibState())
+        switch (sys->getCalibState())
         {
         case PRE_CALIB:
         if (gpio_get(PIN_SW0) && gpio_get(PIN_SW2))
         {
-            sys.setCalibState(CALIBRATING);
+            sys->setCalibState(CALIBRATING);
         }
         break;
 
@@ -74,31 +74,31 @@ int main()
             stepperMotor->calibrateMotor(*encoder);
             std::cout << "Calibration: finished" << std::endl;
             userButtons->enableInterrupts(std::vector{PIN_SW1});
-            sys.setCalibState(CALIBRATED);
-            sys.subPub(PUBLISH, MQTT_TOPIC_SYSTEM_STATE, "CALIBRATED");
+            sys->setCalibState(CALIBRATED);
+            sys->subPub(PUBLISH, MQTT_TOPIC_SYSTEM_STATE, "CALIBRATED");
             break;
 
 
         case CALIBRATED:
 
-            sys.updateStatusLeds();
+            sys->updateStatusLeds();
 
-            switch (sys.getCurrentDoorState())
+            switch (sys->getCurrentDoorState())
             {
             case CLOSED:
                 // press sw1 to open
-                if (queue_try_remove(&sw1EventQ, &queueDummy) || sys.getDriveCommand() == "OPEN")
+                if (queue_try_remove(&sw1EventQ, &queueDummy) || sys->getDriveCommand() == "OPEN")
                 {
-                    sys.setCurrentDoorState(IN_BETWEEN); // PREVIOUS-STATE = CLOSED, CURRENT_STATE = IN_BETWEEN
-                    sys.subPub(PUBLISH, MQTT_TOPIC_DOOR_STATE, "IN_BETWEEN");
+                    sys->setCurrentDoorState(IN_BETWEEN); // PREVIOUS-STATE = CLOSED, CURRENT_STATE = IN_BETWEEN
+                    sys->subPub(PUBLISH, MQTT_TOPIC_DOOR_STATE, "IN_BETWEEN");
                 }
                 break;
 
-            case IN_BETWEEN:
+            case IN_BETWEEN: // Saadaanko selkeemmäks logiikkaa
 
                 if (stepperMotor->isDoorStuck())
                 {
-                    if (queue_try_remove(&sw1EventQ, &queueDummy) || sys.getDriveCommand() == "REVERSE")
+                    if (queue_try_remove(&sw1EventQ, &queueDummy) || sys->getDriveCommand() == "REVERSE")
                     {
                         stepperMotor->clearDoorStuck();
                     }
@@ -118,36 +118,36 @@ int main()
 
                 if (stoppedBySw1)
                 {
-                    while (!queue_try_remove(&sw1EventQ, &queueDummy) || sys.getDriveCommand() == "RUN")
-                    {}
+                    while (!queue_try_remove(&sw1EventQ, &queueDummy) || sys->getDriveCommand() == "RUN")
+                    {} // Keksitäänkö tapa jolla ei tarvii blokata?
                 }
                 else
                 {
-                    if (sys.getPreviousDoorState() == CLOSED &&
+                    if (sys->getPreviousDoorState() == CLOSED &&
                         !stepperMotor->getDirection())
                     {
-                        sys.setCurrentDoorState(OPEN);
-                        sys.subPub(PUBLISH, MQTT_TOPIC_DOOR_STATE, "OPEN");
+                        sys->setCurrentDoorState(OPEN);
+                        sys->subPub(PUBLISH, MQTT_TOPIC_DOOR_STATE, "OPEN");
                     }
-                    else if (sys.getPreviousDoorState() == OPEN &&
+                    else if (sys->getPreviousDoorState() == OPEN &&
                         stepperMotor->getDirection())
                     {
-                        sys.setCurrentDoorState(CLOSED);
-                        sys.subPub(PUBLISH, MQTT_TOPIC_DOOR_STATE, "CLOSED");
+                        sys->setCurrentDoorState(CLOSED);
+                        sys->subPub(PUBLISH, MQTT_TOPIC_DOOR_STATE, "CLOSED");
                     }
                     else
                     {
-                        sys.setCurrentDoorState(sys.getPreviousDoorState());
+                        sys->setCurrentDoorState(sys->getPreviousDoorState());
                     }
                 }
                 break;
 
             case OPEN:
                 // press sw1 to close
-                if (queue_try_remove(&sw1EventQ, &queueDummy) || sys.getDriveCommand() == "CLOSE")
+                if (queue_try_remove(&sw1EventQ, &queueDummy) || sys->getDriveCommand() == "CLOSE")
                 {
-                    sys.setCurrentDoorState(IN_BETWEEN); // PREVIOUS-STATE = OPEN, CURRENT_STATE = IN_BETWEEN
-                    sys.subPub(PUBLISH, MQTT_TOPIC_DOOR_STATE, "IN_BETWEEN");
+                    sys->setCurrentDoorState(IN_BETWEEN); // PREVIOUS-STATE = OPEN, CURRENT_STATE = IN_BETWEEN
+                    sys->subPub(PUBLISH, MQTT_TOPIC_DOOR_STATE, "IN_BETWEEN");
                 }
                 break;
             }

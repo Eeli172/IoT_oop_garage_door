@@ -8,7 +8,6 @@
 /* CUSTOM HEADERS */
 #include "../gpios/gpios.h"
 #include "../gpios/encoder/encoder.h"
-#include "../types/types.h"
 
 class Motor {
 public:
