@@ -14,6 +14,7 @@
 #include "macros/macros.h"
 #include "pico/stdio.h"
 #include "gpios/encoder/encoder.h"
+#include "pico/cyw43_arch.h"
 
 /* SYSTEM */
 
@@ -57,6 +58,8 @@ int main()
 
     while (true)
     {
+        sleep_ms(1);
+
         switch (sys->getCalibState())
         {
         case PRE_CALIB:
@@ -97,14 +100,10 @@ int main()
             case IN_BETWEEN:
 
                 // Door is stopped because of STUCK or SW1.
-                if (sys->isWaitingForCommand())
+                if (sys->getWaitingForCommand())
                 {
-                    if (queue_try_remove(&sw1EventQ, &queueDummy) ||
-                        sys->getDriveCommand() == "RUN" ||
-                        sys->getDriveCommand() == "REVERSE") // en kyl oo varma miten tää toimisi
+                    if (queue_try_remove(&sw1EventQ, &queueDummy) || sys->getDriveCommand() == "REVERSE")
                     {
-                        // printf("continue with sw1\n");
-
                         sys->setWaitingForCommand(false);
                         stepperMotor->clearErrorState();
                     }
@@ -122,7 +121,7 @@ int main()
                     //  printf("STUCK in between\n");
                     sys->subPub(
                         PUBLISH,
-                        MQTT_TOPIC_DOOR_STATE,
+                        MQTT_TOPIC_ERROR_STATE,
                         "STUCK"
                     );
 
@@ -155,6 +154,8 @@ int main()
                 {
                     // Door was reversed and reached the same limit.
                     sys->setCurrentDoorState(sys->getPreviousDoorState());
+                    sys->subPub(PUBLISH, MQTT_TOPIC_DOOR_STATE,
+                                stepperMotor->getDirection() ? "CLOSED" : "OPEN");
                 }
 
                 break;

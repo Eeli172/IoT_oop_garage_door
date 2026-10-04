@@ -89,16 +89,6 @@ bool MQTTManager::getMqttStatus() const
     return this->mqttEnabled;
 }
 
-bool MQTTManager::getMqttTransmissionStatus() const
-{
-    return this->mqttSubPubStatus;
-}
-
-void MQTTManager::reverseMqttTransmissionStatus()
-{
-    this->mqttSubPubStatus = !this->mqttSubPubStatus;
-}
-
 void MQTTManager::setTopic(const std::string& newTopic)
 {
     if (!this->currentTopic.empty())
@@ -126,7 +116,6 @@ void MQTTManager::mqttIncomingDataCb(void *arg, const u8_t *data, u16_t len, u8_
     if (auto *self = static_cast<MQTTManager*>(arg); self)
     {
         self->nextCommandBuffer.clear();
-
         self->nextCommandBuffer.append(reinterpret_cast<const char*>(data), len);
 
         printf("[MQTT-DATA-CB] --> Data received: %s\n", self->nextCommandBuffer.c_str());
@@ -151,7 +140,6 @@ void MQTTManager::mqttSubscribeCb(void* arg, err_t result)
         }
 
         printf("[MQTT-SUBSCRIBE-CB] --> MQTT subscribe successful.\n");
-        self->mqttSubPubStatus = true;
     }
 }
 
@@ -166,7 +154,6 @@ void MQTTManager::mqttPublishCb(void* arg, err_t result)
         }
 
         printf("[MQTT-PUBLISH-CB] --> MQTT publish successful.\n");
-        self->mqttSubPubStatus = true;
     }
 }
 
@@ -210,9 +197,13 @@ void MQTTManager::mqttConnectCb(mqtt_client_t* client, void *arg, mqtt_connectio
 // MQTT SUBSCRIBE FUNCTION
 bool MQTTManager::subscribeToTopic(const mqttSubState_t &subsState)
 {
-    if (!mqtt_client_is_connected(this->mqttInfo.mqtt_client)) return false;
-
     cyw43_arch_lwip_begin();
+    if (!mqtt_client_is_connected(this->mqttInfo.mqtt_client))
+    {
+        cyw43_arch_lwip_end();
+        return false;
+    }
+
     const err_t errSub = mqtt_sub_unsub(mqttInfo.mqtt_client, this->currentTopic.c_str(), 1, mqttSubscribeCb, this, subsState);
     cyw43_arch_lwip_end();
 
@@ -228,9 +219,13 @@ bool MQTTManager::subscribeToTopic(const mqttSubState_t &subsState)
 // MQTT PUBLISH FUNCTION
 bool MQTTManager::publishToTopic(const std::string &msg)
 {
-    if (!mqtt_client_is_connected(this->mqttInfo.mqtt_client)) return false;
-
     cyw43_arch_lwip_begin();
+    if (!mqtt_client_is_connected(this->mqttInfo.mqtt_client))
+    {
+        cyw43_arch_lwip_end();
+        return false;
+    }
+
     const err_t errSub = mqtt_publish(mqttInfo.mqtt_client, this->currentTopic.c_str(),
         msg.c_str(), msg.length(),
         1, 0, mqttPublishCb, this);

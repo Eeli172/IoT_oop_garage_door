@@ -31,14 +31,14 @@ public:
     [[nodiscard]] bool getDoorErrorState() const;
     [[nodiscard]] doorState_t getPreviousDoorState() const;
     [[nodiscard]] doorState_t getCurrentDoorState() const;
-    [[nodiscard]] bool isWaitingForCommand() const;
+    [[nodiscard]] bool getWaitingForCommand() const;
 
     /* IO DEVICES*/
     // MQTT
     void connectToMQTTServer();
     void subPub(const mqttSubState_t& transmissionType, const std::string& topic,
                 const std::optional<std::string>& msg) const;
-    std::string getDriveCommand();
+    std::string getDriveCommand() const;
 
 
     // EEPROM

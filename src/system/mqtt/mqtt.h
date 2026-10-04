@@ -34,9 +34,7 @@ class MQTTManager
     void setTopic(const std::string &newTopic);
 
     // UTILITY FUNCTIONS
-    bool getMqttStatus() const; // Determines the connection to the MQTT broker.
-    bool getMqttTransmissionStatus() const; // Determines whether an interaction (PUB, SUB, UNSUB) was successful with the broker
-    void reverseMqttTransmissionStatus(); // After a positive callback is received, the function is called to toggle the status.
+    [[nodiscard]] bool getMqttStatus() const; // Determines the connection to the MQTT broker.
     std::string getNextCommand();
 
     private:

@@ -40,6 +40,11 @@ void System::setMotor(const std::shared_ptr<Motor> &Mtr)
     this->motor = Mtr;
 }
 
+void System::setWaitingForCommand(bool waiting)
+{
+    waitingForCommand = waiting;
+}
+
 
 // GETTER FUNCTIONS
 calibrationState_t System::getCalibState() const
@@ -62,15 +67,17 @@ doorState_t System::getPreviousDoorState() const
     return previousDoorState;
 }
 
-bool System::isWaitingForCommand() const
+bool System::getWaitingForCommand() const
 {
     return waitingForCommand;
 }
 
-void System::setWaitingForCommand(bool waiting)
+std::string System::getDriveCommand() const
 {
-    waitingForCommand = waiting;
+    return this->mqttBroker->getNextCommand();
 }
+
+
 /* MQTT INTERFACE */
 void System::connectToMQTTServer()
 {
@@ -81,22 +88,12 @@ void System::connectToMQTTServer()
         subscribe & publish */
         if (this->mqttBroker->establishMQTTClient())
         {
-            const absolute_time_t timeout = get_absolute_time();
-            while (!this->mqttBroker->getMqttStatus() && absolute_time_diff_us(timeout, get_absolute_time()) < 10000000)
-            {
-                cyw43_arch_poll();
-                sleep_ms(1);
-            }
+            std::cout << "[MQTT-SYSTEM-STATUS] --> Successfully attempted connection to an MQTT broker." << std::endl;
+        }
 
-            if (this->mqttBroker->getMqttStatus())
-            {
-                std::cout << "MQTT connection established successfully" << std::endl;
-            }
-
-            else
-            {
-                std::cout << "MQTT connection ran into a timeout." << std::endl;
-            }
+        else
+        {
+            std::cout << "[MQTT-SYSTEM-STATUS] --> Failure in attempt to connect to an MQTT broker, check establishMQTTClient() -method" << std::endl;
         }
     }
 }
@@ -125,29 +122,9 @@ void System::subPub(const mqttSubState_t &transmissionType, const std::string &t
         }
     }
 
-    if (!errorMsg.empty())
-    {
-        std::cout << errorMsg << std::endl;
-        return;
-    }
-
-    const absolute_time_t timeout = get_absolute_time();
-    while (!this->mqttBroker->getMqttTransmissionStatus() && absolute_time_diff_us(timeout, get_absolute_time()) < 10000000)
-    {
-        cyw43_arch_poll();
-        sleep_ms(1);
-    }
-
-    if (this->mqttBroker->getMqttTransmissionStatus())
-    {
-        this->mqttBroker->reverseMqttTransmissionStatus();
-    }
+    if (!errorMsg.empty())std::cout << errorMsg << std::endl;
 }
 
-std::string System::getDriveCommand()
-{
-    return this->mqttBroker->getNextCommand();
-}
 
 
 /* EEPROM INTERFACE */
