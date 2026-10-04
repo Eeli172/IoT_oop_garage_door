@@ -100,7 +100,7 @@ Switches::Switches(const std::vector<int> &pins, bool input, bool pullup, bool i
 }
 
 // Allows toggling of multiple interrupts of multiple gpios at a time
-void Switches::enableInterrupts(const std::vector<int> &swPins) const
+void Switches::setInterrupt(const std::vector<int> &swPins, const bool& enable) const
 {
     if (swPins.size() > SW_AMOUNT){
         std::cerr << "System does not support over [ "<< SW_AMOUNT <<" ] per class." << std::endl;
@@ -110,7 +110,7 @@ void Switches::enableInterrupts(const std::vector<int> &swPins) const
     for (std::size_t i = 0; i < swPins.size(); i++) {
         for (const auto &swGpio: this->switches) {
             if (swGpio->getPin() == swPins[i]) {
-                gpio_set_irq_enabled(swPins[i], GPIO_IRQ_EDGE_FALL | GPIO_IRQ_EDGE_RISE, true);
+                gpio_set_irq_enabled(swPins[i], GPIO_IRQ_EDGE_FALL | GPIO_IRQ_EDGE_RISE, enable);
             }
         }
     }

@@ -8,6 +8,7 @@
 
 #include "hardware/gpio.h"
 #include "pico/util/queue.h"
+#include "types/types.h"
 
 
 Motor::Motor(
@@ -94,6 +95,16 @@ bool Motor::getDirection() const
 {
     return direction;
 }
+
+
+float Motor::getMtrStpsPerEncder() const {
+    return this->movementCalibration.motorStepsPerEncoder;
+}
+
+void Motor::setMtrStpsPerEncder(float steps) {
+    this->movementCalibration.motorStepsPerEncoder = steps;
+}
+
 
 
 bool Motor::runMotor(Encoder& encoder)
@@ -200,7 +211,7 @@ void Motor::calibrateMotor(Encoder& encoder)
     }
 
     movementCalibration.motorStepsPerEncoder = totalRatio / CALIBRATION_RUNS;
-
+    
     movementCalibration.valid = calibrationValid && movementCalibration.motorStepsPerEncoder > 0.0f;
 
     calibrated = movementCalibration.valid;

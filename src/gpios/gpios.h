@@ -32,7 +32,7 @@ public:
     Switches(const Switches &) = delete;
     ~Switches() = default;
 
-    void enableInterrupts(const std::vector<int> &swPins) const;
+    void setInterrupt(const std::vector<int> &swPins, const bool& enable) const;
 
 private:
     std::vector<std::unique_ptr<CommonGPIO>> switches;

@@ -64,19 +64,21 @@ void Encoder::updatePosition()
     {
         ++encoderPosition;
 
-        std::cout
+        /*std::cout
             << "[ENCODER] Clockwise | position = "
             << encoderPosition
             << std::endl;
+            */
     }
     else
     {
         --encoderPosition;
-
+        /*
         std::cout
             << "[ENCODER] Counter-clockwise | position = "
             << encoderPosition
             << std::endl;
+            */
     }
 }
 

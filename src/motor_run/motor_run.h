@@ -8,6 +8,7 @@
 /* CUSTOM HEADERS */
 #include "../gpios/gpios.h"
 #include "../gpios/encoder/encoder.h"
+#include "../../types/types.h"
 
 class Motor {
 public:
@@ -15,12 +16,6 @@ public:
     ~Motor() = default;
     Motor(const Motor&) = delete;
     Motor &operator=(const Motor&) = delete;
-
-    struct MovementCalibration
-    {
-        float motorStepsPerEncoder;
-        bool valid;
-    };
 
     void runMotorSteps();
     bool runMotor(Encoder& encoder);
@@ -30,7 +25,9 @@ public:
     bool reverseOnPressedLimitSwitch();
 
     bool getDirection() const;
-
+    
+    float getMtrStpsPerEncder() const;
+    void setMtrStpsPerEncder(float steps);
 
     void calibrateMotor(Encoder& encoder);
 

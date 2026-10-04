@@ -23,7 +23,7 @@ public:
 
     /* SYSTEM SETTERS */
     void setCalibState(const calibrationState_t& state);
-    void setCurrentDoorState(const doorState_t& state);
+    void setDoorStates(const doorState_t& state);
     void setWaitingForCommand(bool waiting);
 
     /* SYSTEM GETTERS */
@@ -42,12 +42,13 @@ public:
 
 
     // EEPROM
-    void saveSystem(uint16_t addr);
+    void saveSystem(uint16_t addr, int value = 0, uint16_t addrIncrement = 0);
+    void saveStepsPerEncoder();
     void loadSystem();
 
 
     // MOTOR
-    void setMotor(const std::shared_ptr<Motor>& Mtr);
+    void setMotor(const std::shared_ptr<Motor>& mtr);
 
 
     // STATUS LEDS

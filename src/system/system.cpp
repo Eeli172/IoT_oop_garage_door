@@ -1,4 +1,5 @@
 /* STL */
+#include <cmath>
 #include <iostream>
 #include <memory>
 #include <ostream>
@@ -12,7 +13,7 @@
 
 
 System::System() :
-calibState(PRE_CALIB),
+calibState(NOT_CALIBRATED),
 currentDoorState(CLOSED),
 previousDoorState(CLOSED),
 mqttBroker(std::make_unique<MQTTManager>()),
@@ -24,18 +25,21 @@ eeprom(std::make_unique<Eeprom>())
 void System::setCalibState(const calibrationState_t& state)
 {
     this->calibState = state;
-    // this->saveSystem(EEPROM_ADDR_CALIBRATION_STATE);
+    //this->saveSystem(EEPROM_ADDR_CALIBRATION_STATE);
+    std::cout << "CALIB STATE: " << state << std::endl;
 }
 
-void System::setCurrentDoorState(const doorState_t& state)
+void System::setDoorStates(const doorState_t& state)
 {
-    previousDoorState = currentDoorState;
-    currentDoorState = state;
+    this->previousDoorState = this->currentDoorState;
+    this->currentDoorState = state;
+    //this->saveSystem(EEPROM_ADDR_DOOR_STATE);
+    std::cout << "DOOR STATE: " << state << std::endl;
 }
 
-void System::setMotor(const std::shared_ptr<Motor> &Mtr)
+void System::setMotor(const std::shared_ptr<Motor> &mtr)
 {
-    this->motor = Mtr;
+    this->motor = mtr;
 }
 
 void System::setWaitingForCommand(bool waiting)
@@ -126,43 +130,88 @@ void System::subPub(const mqttSubState_t &transmissionType, const std::string &t
 
 
 /* EEPROM INTERFACE */
-void System::saveSystem(uint16_t addr) {
-    int temp{0};
+void System::saveSystem(uint16_t addr, int value, uint16_t addrIncrement) {
 
     switch (addr) {
         case EEPROM_ADDR_CALIBRATION_STATE:
-            temp = static_cast<int>(this->getCalibState());
+            value = static_cast<int>(this->getCalibState());
             break;
 
         case EEPROM_ADDR_DOOR_STATE:
-            temp = static_cast<int>(getCurrentDoorState());
+            value = static_cast<int>(getCurrentDoorState());
+            break;
+
+        case EEPROM_ADDR_STEPS_PER_ENCODER:
+            addr += addrIncrement;
             break;
 
         default:
             std::cerr << "[ERROR-SYSTEM-SAVE] --> invalid memory address" << std::endl;
     }
 
-    if (this->eeprom->write(addr, temp)) {
+    if (this->eeprom->write(addr, value)) {
         std::cerr << "[ERROR-SYSTEM-SAVE] --> Failed saving" << std::endl;
     }
 }
 
+
+void System::saveStepsPerEncoder() {
+    uint32_t floatStepsRounded = std::round(FLOAT_MULTIPLIER*motor->getMtrStpsPerEncder());
+
+    for (uint i = 0; i < sizeof(uint32_t); i++) {
+        uint8_t splitSteps = (floatStepsRounded >> (i * BYTE_BITS)) & 0xFF;
+        saveSystem(EEPROM_ADDR_STEPS_PER_ENCODER, splitSteps, i*2);
+    }
+}
+
+
+
 void System::loadSystem() {
     int temp{0};
 
-    if (this->eeprom->read(EEPROM_ADDR_CALIBRATION_STATE, &temp)) {
+    if (this->eeprom->read(EEPROM_ADDR_CALIBRATION_STATE, &temp)) 
+    {
         std::cout << "[SYS-LOAD-CALIB_STATE] --> previous value not found" << std::endl;
         return;
     }
-    std::cout << "[SYS-LOAD-CALIB_STATE] --> previous value found" << std::endl;
-    this->setCalibState((calibrationState_t) temp);
+    else
+    {
+        std::cout << "[SYS-LOAD-CALIB_STATE] --> previous value found" << std::endl;
+        this->setCalibState((calibrationState_t) temp);
+    }
+    
 
-    if (this->eeprom->read(EEPROM_ADDR_DOOR_STATE, &temp)) {
+    temp = 0; 
+    if (this->eeprom->read(EEPROM_ADDR_DOOR_STATE, &temp)) 
+    {
         std::cout << "[SYS-LOAD-DOOR_STATE] --> previous value not found" << std::endl;
         return;
     }
-    std::cout << "[SYS-LOAD-DOOR_STATE] --> previous value found" << std::endl;
-    setCurrentDoorState((doorState_t) temp);
+    else 
+    {
+        std::cout << "[SYS-LOAD-DOOR_STATE] --> previous value found" << std::endl;
+        if (temp != OPEN && temp != CLOSED) // calibration needed if the door isn't in OPEN or CLOSED state
+        {
+            this->setCalibState(NOT_CALIBRATED);
+            return;
+        }
+        setDoorStates((doorState_t) temp);
+    }
+    
+
+    uint32_t stepsPerEnc{0};
+    for (uint i = 0; i < sizeof(uint32_t); i++) {
+        if (this->eeprom->read(EEPROM_ADDR_STEPS_PER_ENCODER+i*2, &temp))
+        {
+            std::cout << "[SYS-LOAD-STPS_PER_ENC] --> previous value not found" << std::endl;
+            return;
+        }
+        else
+        {
+            stepsPerEnc |= (static_cast<uint32_t>(static_cast<uint8_t>(temp)) << (i * BYTE_BITS));
+        }
+    }
+    this->motor->setMtrStpsPerEncder((float)stepsPerEnc/FLOAT_MULTIPLIER);
 }
 
 

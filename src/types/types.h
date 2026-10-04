@@ -8,9 +8,9 @@
 
 typedef enum { CLOSED, IN_BETWEEN, OPEN } doorState_t;
 
-typedef enum { PRE_CALIB, CALIBRATING, CALIBRATED } calibrationState_t;
+typedef enum { NOT_CALIBRATED, CALIBRATING, CALIBRATED } calibrationState_t;
 
-typedef enum {UNSUBSCRIBE, SUBSCRIBE, PUBLISH} mqttSubState_t;
+typedef enum { UNSUBSCRIBE, SUBSCRIBE, PUBLISH } mqttSubState_t;
 
 
 // STRUCTS
@@ -30,6 +30,13 @@ typedef struct {
     uint8_t data_array[EEPROM_BYTES];
     uint data_length;
 } payload_control_t;
+
+typedef struct {
+    float motorStepsPerEncoder;
+    bool valid;
+} MovementCalibration;
+
+
 
 
 #endif //IOT_OOP_GARAGE_DOOR_TYPES_H
