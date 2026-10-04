@@ -8,8 +8,6 @@
 #include "eeprom/eeprom.h"
 #include "gpios/leds/leds.h"
 
-#include "pico/cyw43_arch.h"
-#include "pico/time.h"
 #include "types/types.h"
 
 

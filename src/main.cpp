@@ -14,7 +14,6 @@
 #include "macros/macros.h"
 #include "pico/stdio.h"
 #include "gpios/encoder/encoder.h"
-#include "pico/cyw43_arch.h"
 
 /* SYSTEM */
 
