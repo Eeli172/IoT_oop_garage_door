@@ -32,13 +32,13 @@ public:
     [[nodiscard]] doorState_t getPreviousDoorState() const;
     [[nodiscard]] doorState_t getCurrentDoorState() const;
     [[nodiscard]] bool getWaitingForCommand() const;
+    std::optional<std::string> getDriveCommand(const std::string &rC);
 
-    /* IO DEVICES*/
+    /* IO DEVICES */
     // MQTT
     void connectToMQTTServer();
     void subPub(const mqttSubState_t& transmissionType, const std::string& topic,
                 const std::optional<std::string>& msg) const;
-    std::string getDriveCommand() const;
 
 
     // EEPROM
@@ -60,8 +60,7 @@ private:
     calibrationState_t calibState;
     doorState_t currentDoorState;
     doorState_t previousDoorState;
-    bool waitingForCommand = false;
-
+    bool waitingForCommand;
 
     /* SYSTEM IO DEVICES */
     std::unique_ptr<MQTTManager> mqttBroker;

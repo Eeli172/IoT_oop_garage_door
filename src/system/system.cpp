@@ -16,6 +16,7 @@ System::System() :
 calibState(NOT_CALIBRATED),
 currentDoorState(CLOSED),
 previousDoorState(CLOSED),
+waitingForCommand(false),
 mqttBroker(std::make_unique<MQTTManager>()),
 eeprom(std::make_unique<Eeprom>())
 {}
@@ -74,9 +75,25 @@ bool System::getWaitingForCommand() const
     return waitingForCommand;
 }
 
-std::string System::getDriveCommand() const
+std::optional<std::string> System::getDriveCommand(const std::string &rC)
 {
-    return this->mqttBroker->getNextCommand();
+    std::optional<std::string> driveCommand = this->mqttBroker->getNextCommand();
+
+    if (driveCommand.has_value())
+    {
+        std::string systemMsg = "INSTRUCTION FAILED.";
+
+        if (driveCommand == "OPEN" || driveCommand == "CLOSE" || driveCommand == "REVERSE")
+        {
+            if (driveCommand == rC)
+            {
+                systemMsg = "INSTRUCTION SUCCESSFULLY EXECUTED";
+            }
+        }
+        subPub(PUBLISH, MQTT_TOPIC_INSTRUCTION_RESPONSE, systemMsg);
+
+    }
+    return driveCommand;
 }
 
 

@@ -2,6 +2,7 @@
 #include <iostream>
 #include <ostream>
 #include <cstring>
+#include <optional>
 
 /* CUSTOM */
 #include "mqtt.h"
@@ -16,7 +17,6 @@
 /* CLASS MQTTManager */
 MQTTManager::MQTTManager() :
 wiFiManager(WIFI()), hardwareEnabled(false), mqttEnabled(false),
-mqttSubPubStatus(false),
 currentTopic(MQTT_TOPIC_RUN_INSTRUCTIONS)
 {
     this->getBrokerIpOctets();
@@ -99,11 +99,15 @@ void MQTTManager::setTopic(const std::string& newTopic)
     this->currentTopic = newTopic;
 }
 
-std::string MQTTManager::getNextCommand()
+std::optional<std::string> MQTTManager::getNextCommand()
 {
-    std::string tempCommandBuffer = this->nextCommandBuffer;
-    this->nextCommandBuffer.clear();
-    return tempCommandBuffer;
+    if (!this->nextCommandBuffer.empty())
+    {
+        std::string tempCommandBuffer = this->nextCommandBuffer;
+        this->nextCommandBuffer.clear();
+        return tempCommandBuffer;
+    }
+    return std::nullopt;
 }
 
 void MQTTManager::mqttIncomingPublishCb(void *arg, const char *topic, u32_t tot_len)
@@ -115,7 +119,6 @@ void MQTTManager::mqttIncomingDataCb(void *arg, const u8_t *data, u16_t len, u8_
 {
     if (auto *self = static_cast<MQTTManager*>(arg); self)
     {
-        self->nextCommandBuffer.clear();
         self->nextCommandBuffer.append(reinterpret_cast<const char*>(data), len);
 
         printf("[MQTT-DATA-CB] --> Data received: %s\n", self->nextCommandBuffer.c_str());
@@ -170,6 +173,7 @@ void MQTTManager::mqttConnectCb(mqtt_client_t* client, void *arg, mqtt_connectio
     {
         if (status == MQTT_CONNECT_ACCEPTED)
         {
+            printf("[MQTT-CONNECT-ERROR-CB] --> MQTT Connection successful.\n");
             self->mqttEnabled = true;
 
             // [1]. Set callbacks for incoming publishes in a topic
@@ -177,13 +181,6 @@ void MQTTManager::mqttConnectCb(mqtt_client_t* client, void *arg, mqtt_connectio
                 mqttIncomingPublishCb,
                 mqttIncomingDataCb,
                 self);
-
-            // [2.] Subscribe to a default topic.
-            mqtt_sub_unsub(client,
-                MQTT_TOPIC_RUN_INSTRUCTIONS,
-                1, mqttSubscribeCb,
-                self,
-                SUBSCRIBE);
         }
 
         else

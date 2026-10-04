@@ -1,15 +1,18 @@
 #ifndef IOT_OOP_GARAGE_DOOR_MQTT_H
 #define IOT_OOP_GARAGE_DOOR_MQTT_H
 
-#include "../wifi/wifi.h"
-#include "types/types.h"
+/* STL */
 #include <string>
 #include <array>
+
+/* CUSTOM HEADERS */
+#include "../wifi/wifi.h"
+#include "types/types.h"
 
 class MQTTManager
 {
     public:
-    MQTTManager();
+    explicit MQTTManager();
 
     /* WIFI METHODS */
     bool initWiFi();
@@ -35,10 +38,11 @@ class MQTTManager
 
     // UTILITY FUNCTIONS
     [[nodiscard]] bool getMqttStatus() const; // Determines the connection to the MQTT broker.
-    std::string getNextCommand();
+    std::optional<std::string> getNextCommand();
 
     private:
     void getBrokerIpOctets() const;
+
     /* WIFI + HARDWARE ATTRIBUTES */
     WIFI wiFiManager;
     bool hardwareEnabled;
@@ -46,8 +50,6 @@ class MQTTManager
     /* MQTT ATTRIBUTES */
     std::array<int, IP_OCTETS> brokerIpOctets;
     bool mqttEnabled;
-    bool mqttSubPubStatus;
-
     mqtt_information mqttInfo;
 
     // DATA

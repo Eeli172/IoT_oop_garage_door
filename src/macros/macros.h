@@ -19,6 +19,7 @@
 #define MQTT_CLIENT_ID "rp2040_gd"
 #define MQTT_CLIENT_KA_TIME 60
 #define MQTT_TOPIC_RUN_INSTRUCTIONS "garage/door/run_instructions"
+#define MQTT_TOPIC_INSTRUCTION_RESPONSE "garage/door/response"
 #define MQTT_TOPIC_DOOR_STATE "garage/door/door_status"
 #define MQTT_TOPIC_SYSTEM_STATE "garage/door/system_state"
 #define MQTT_TOPIC_ERROR_STATE "garage/door/error_state"
