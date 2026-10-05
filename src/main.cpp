@@ -42,23 +42,20 @@ int main()
     sys->setMotor(stepperMotor);
     sys->setButtons(userButtons);
     sys->createStatusLeds();
-    sys->connectToMQTTServer();
     sys->loadSystem();
-
-    // EEPROM TESTAUSTA VARTEN
-    //sys->printStates();
+    sys->connectToMQTTServer();
 
     bool queueDummy;
-    bool stoppedBySw1;
-
+    bool manualStop{false};
+    
     while (true)
     {
+        sys->updateStatusLeds();
+
         switch (sys->getCalibState())
         {
         case NOT_CALIBRATED:
-
-            userButtons->setInterrupt(std::vector{PIN_SW1}, false);
-            if (gpio_get(PIN_SW0) && gpio_get(PIN_SW2))
+            if ((gpio_get(PIN_SW0) && gpio_get(PIN_SW2)))
             {
                 sys->setCalibStateAndSave(CALIBRATING);
             }
@@ -68,11 +65,13 @@ int main()
         case CALIBRATING:
 
             std::cout << "Calibration: started" << std::endl;
+            sys->enableStatusLeds(false);
             stepperMotor->calibrateMotor(*encoder);
             sys->saveSystem(EEPROM_ADDR_STEPS_PER_ENCODER);
             sys->setDoorStatesAndSave(CLOSED); 
             std::cout << "Calibration: finished" << std::endl;
             
+            sys->enableStatusLeds(true);
             userButtons->setInterrupt(std::vector{PIN_SW1}, true);
             sys->subPub(SUBSCRIBE, MQTT_TOPIC_RUN_INSTRUCTIONS, std::nullopt);
             sys->subPub(PUBLISH, MQTT_TOPIC_SYSTEM_STATE, "CALIBRATED");
@@ -82,7 +81,6 @@ int main()
 
         case CALIBRATED:
 
-            sys->updateStatusLeds();
             switch (sys->getCurrentDoorState())
             {
             case CLOSED:
@@ -93,31 +91,30 @@ int main()
                     sys->subPub(PUBLISH, MQTT_TOPIC_DOOR_STATE, "IN_BETWEEN");
                 }
                 break;
-
+            
+                
             case IN_BETWEEN:
 
-                // Door is stopped because of STUCK or SW1.
-                if (stoppedBySw1 || stepperMotor->getErrorState())
+                if (manualStop) // STOPPED BY SW1 (or mqtt command?)
                 {
-                    if (queue_try_remove(&sw1EventQ, &queueDummy) || sys->validateDriveCommand("REVERSE"))
-                    {
-                        if (stepperMotor->getErrorState())
-                        {
-                            sys->subPub(PUBLISH,MQTT_TOPIC_ERROR_STATE, "STUCK WAS DETECTED");
-                            stepperMotor->clearErrorState(); // tätä ei tarvii, errorState nollataan calibrateMotorissa ja stepit nollataan runMotorissa
-                            /* sys->setCalibStateAndSave(NOT_CALIBRATED);
-                             * sys->setDoorStatesAndSave(CLOSED);
-                             * sys->subPub(UNSUBSCRIBE, MQTT_TOPIC_RUN_INSTRUCTIONS, std::nullopt);
-                             */
-                        }
+                    if (!queue_try_remove(&sw1EventQ, &queueDummy) && !sys->validateDriveCommand("REVERSE")) {
+                        break;
                     }
-                    else break;
                 }
 
-                stoppedBySw1 = stepperMotor->runMotor(*encoder);
+                manualStop = stepperMotor->runMotor(*encoder);
+
+                if (stepperMotor->getErrorState()) // ERROR --> CALIBRATION NEEDED
+                {
+                    userButtons->setInterrupt(std::vector{PIN_SW1}, false);
+                    sys->subPub(PUBLISH, MQTT_TOPIC_ERROR_STATE, "STUCK WAS DETECTED");
+                    sys->subPub(UNSUBSCRIBE, MQTT_TOPIC_RUN_INSTRUCTIONS, std::nullopt);
+                    sys->setCalibStateAndSave(NOT_CALIBRATED);
+                    manualStop = false;
+                }
 
                 // Motor reached a limit switch { OPEN, CLOSED }
-                if (!stoppedBySw1 && !stepperMotor->getErrorState())
+                if (!manualStop && !stepperMotor->getErrorState())
                 {
                     if (sys->getPreviousDoorState() == CLOSED &&
                    !stepperMotor->getDirection())
@@ -141,6 +138,7 @@ int main()
                 }
                 break;
 
+
             case OPEN:
 
                 if (queue_try_remove(&sw1EventQ, &queueDummy) || sys->validateDriveCommand("CLOSE"))
@@ -151,17 +149,5 @@ int main()
                 break;
             }
         }
-
-        /*
-        // EEPROM TESTAUSTA VARTEN
-        if (gpio_get(PIN_SW2)) {
-            sys->printStates();
-            while (gpio_get(PIN_SW2));
-            sleep_ms(200);
-            
-            sys->loadSystem();
-            sys->printStates();
-        }
-        */
     }
 }

@@ -15,6 +15,7 @@ StatusLeds::StatusLeds(const std::vector<int> &ledGpios, const std::weak_ptr<Sys
     doorState(CLOSED), 
     errorState(false),
     ledValue(false), 
+    enabled(false),
     time_previous(0)
 {
     for (const auto &ledGpio: ledGpios)
@@ -23,12 +24,17 @@ StatusLeds::StatusLeds(const std::vector<int> &ledGpios, const std::weak_ptr<Sys
     }
 }
 void StatusLeds::updateCall() {
-    this->getStates();
-    
-    if (errorState) this->toggleValue();
-    else ledValue = true;
-
-    this->updateLeds();
+    if (this->enabled) {
+        this->getStates();
+        
+        if (errorState) this->toggleValue();
+        else ledValue = true;
+        
+        this->updateLeds();
+    }
+    else {
+        turnOff();
+    }
 }
 void StatusLeds::getStates() {
     if (auto systemPtr = this->system.lock()) {
@@ -43,6 +49,7 @@ void StatusLeds::toggleValue() {
     }
 }
 void StatusLeds::updateLeds() {
+
     switch (doorState) {
     case OPEN:
         gpio_put(PIN_LED_1, ledValue);
@@ -62,4 +69,15 @@ void StatusLeds::updateLeds() {
         gpio_put(PIN_LED_3, ledValue);
         break;
     }
+}
+
+void StatusLeds::setEnabled(const bool& enbld) {
+    this->enabled = enbld;
+    updateCall();
+}
+
+void StatusLeds::turnOff() {
+    gpio_put(PIN_LED_1, false);
+    gpio_put(PIN_LED_2, false);
+    gpio_put(PIN_LED_3, false);
 }

@@ -229,7 +229,11 @@ void System::loadSystem() {
     this->motor->setMtrStpsPerEncder(stepsPerEncoder.value());
     this->setDoorStates((doorState_t) doorState.value());
     if (doorState.value() == OPEN) this->motor->reverseDirection();
-    if (calibState.value() == CALIBRATED) this->buttons->setInterrupt(std::vector{PIN_SW1}, true);
+    if (calibState.value() == CALIBRATED) {
+        this->buttons->setInterrupt(std::vector{PIN_SW1}, true);
+        this->enableStatusLeds(true);
+    }
+
 }
 
 
@@ -250,13 +254,6 @@ void System::updateStatusLeds() const
     statusLeds->updateCall();
 }
 
-// for testing eeprom, will be removed
-void System::printStates() {
-    sleep_ms(20);
-    std::cout << "\ncalib: " << this->getCalibState() << '\n';
-    sleep_ms(20);
-    std::cout << "door: " << this->getCurrentDoorState() << '\n';
-    sleep_ms(20);
-    std::cout << "steps: " << this->motor->getMtrStpsPerEncder() << '\n';
-    sleep_ms(20);
+void System::enableStatusLeds(const bool& enbld) {
+    statusLeds->setEnabled(enbld);
 }

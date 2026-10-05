@@ -21,8 +21,9 @@ public:
     void getStates();
     void updateLeds();
     void toggleValue();
-
-
+    void setEnabled(const bool& enbld);
+    void turnOff();
+    
 private:
     std::vector<std::unique_ptr<CommonGPIO>> ledGpios;
     std::weak_ptr<System> system;
@@ -30,6 +31,7 @@ private:
     doorState_t doorState;
     bool errorState;
     bool ledValue;
+    bool enabled;
     absolute_time_t time_previous;
 };
 

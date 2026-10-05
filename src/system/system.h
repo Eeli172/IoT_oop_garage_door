@@ -48,7 +48,6 @@ public:
     // EEPROM
     void saveSystem(uint16_t addr);
     void loadSystem();
-    void printStates(); // for testing eeprom, will be removed
 
     // MOTOR
     void setMotor(const std::shared_ptr<Motor>& mtr);
@@ -59,6 +58,7 @@ public:
     // STATUS LEDS
     void createStatusLeds();
     void updateStatusLeds() const;
+    void enableStatusLeds(const bool& enbld);
 
 private:
     /* SYSTEM VARIABLES */
