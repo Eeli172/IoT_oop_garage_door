@@ -12,18 +12,17 @@
 class MQTTManager
 {
     public:
-    explicit MQTTManager();
+    MQTTManager();
 
     /* WIFI METHODS */
     bool initWiFi();
 
     /* MQTT METHODS */
-
     // ESTABLISHING A CLIENT INSTANCE + CALLBACK FOR SUCCESSFUL CONNECTION TO BROKER
     bool establishMQTTClient();
     static void mqttConnectCb(mqtt_client_t *client, void *arg, mqtt_connection_status_t status);
 
-    // SUBSCRIBING TO TOPIC
+    // SUBSCRIBING TO TOPIC + CALLBACK FOR SUCCESSFUL SUBSCRIBE
     bool subscribeToTopic(const mqttSubState_t &subsState);
     static void mqttSubscribeCb(void *arg, err_t result);
 

@@ -16,7 +16,7 @@
 
 /* CLASS MQTTManager */
 MQTTManager::MQTTManager() :
-wiFiManager(WIFI()), hardwareEnabled(false), mqttEnabled(false),
+wiFiManager(WIFI()), hardwareEnabled(false), mqttEnabled(false), mqttInfo(nullptr),
 currentTopic(MQTT_TOPIC_RUN_INSTRUCTIONS)
 {
     this->getBrokerIpOctets();
@@ -50,37 +50,42 @@ bool MQTTManager::initWiFi()
 
 bool MQTTManager::establishMQTTClient()
 {
-    cyw43_arch_lwip_begin();
-    mqttInfo.mqtt_client = mqtt_client_new();
-    cyw43_arch_lwip_end();
-
-    if (mqttInfo.mqtt_client != nullptr)
+    if (!mqttInfo.mqtt_client)
     {
-        IP_ADDR4(&mqttInfo.broker_ip, brokerIpOctets[0], brokerIpOctets[1], brokerIpOctets[2], brokerIpOctets[3]);
-
-        memset(&mqttInfo.ci, 0, sizeof(mqttInfo.ci));
-
-        mqttInfo.ci.client_id = MQTT_CLIENT_ID;
-        mqttInfo.ci.keep_alive = MQTT_CLIENT_KA_TIME;
-        mqttInfo.ci.client_pass = NULL;
-        mqttInfo.ci.client_user = NULL;
-        mqttInfo.ci.will_topic = NULL;
-
         cyw43_arch_lwip_begin();
-        const err_t errCon = mqtt_client_connect(
-            mqttInfo.mqtt_client,
-            &mqttInfo.broker_ip,
-            1883,
-            mqttConnectCb,
-            this,
-            &mqttInfo.ci
-        );
+        mqttInfo.mqtt_client = mqtt_client_new();
         cyw43_arch_lwip_end();
-        return errCon == ERR_OK;
+
+        if (mqttInfo.mqtt_client)
+        {
+            IP_ADDR4(&mqttInfo.broker_ip, brokerIpOctets[0], brokerIpOctets[1], brokerIpOctets[2], brokerIpOctets[3]);
+
+            memset(&mqttInfo.ci, 0, sizeof(mqttInfo.ci));
+
+            mqttInfo.ci.client_id = MQTT_CLIENT_ID;
+            mqttInfo.ci.keep_alive = MQTT_CLIENT_KA_TIME;
+            mqttInfo.ci.client_pass = nullptr;
+            mqttInfo.ci.client_user = nullptr;
+            mqttInfo.ci.will_topic = nullptr;
+        }
+
+        else return false;
     }
 
-    return false;
+    cyw43_arch_lwip_begin();
+    const err_t errCon = mqtt_client_connect(
+        mqttInfo.mqtt_client,
+        &mqttInfo.broker_ip,
+        1883,
+        mqttConnectCb,
+        this,
+        &mqttInfo.ci
+    );
+    cyw43_arch_lwip_end();
+
+    return errCon == ERR_OK;
 }
+
 
 /* UTILITY METHODS */
 
@@ -176,7 +181,7 @@ void MQTTManager::mqttConnectCb(mqtt_client_t* client, void *arg, mqtt_connectio
             printf("[MQTT-CONNECT-ERROR-CB] --> MQTT Connection successful.\n");
             self->mqttEnabled = true;
 
-            // [1]. Set callbacks for incoming publishes in a topic
+            // [1]. Set callbacks for incoming publishes and data handling from a subscribed topic
             mqtt_set_inpub_callback(client,
                 mqttIncomingPublishCb,
                 mqttIncomingDataCb,
@@ -186,7 +191,12 @@ void MQTTManager::mqttConnectCb(mqtt_client_t* client, void *arg, mqtt_connectio
         else
         {
             self->mqttEnabled = false;
-            printf("[MQTT-CONNECT-ERROR-CB] --> Connection disconnected, status: %d\n", status);
+            printf("[MQTT-CONNECT-ERROR-CB] --> Connection disconnected, attempting reconnection, status: %d\n", status);
+
+            if (!self->establishMQTTClient())
+            {
+                printf("[MQTT-SYSTEM-STATUS] --> Reattempt to connect to an MQTT broker failed");
+            }
         }
     }
 }

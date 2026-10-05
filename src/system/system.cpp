@@ -75,27 +75,6 @@ bool System::getWaitingForCommand() const
     return waitingForCommand;
 }
 
-std::optional<std::string> System::getDriveCommand(const std::string &rC)
-{
-    std::optional<std::string> driveCommand = this->mqttBroker->getNextCommand();
-
-    if (driveCommand.has_value())
-    {
-        std::string systemMsg = "INSTRUCTION FAILED.";
-
-        if (driveCommand == "OPEN" || driveCommand == "CLOSE" || driveCommand == "REVERSE")
-        {
-            if (driveCommand == rC)
-            {
-                systemMsg = "INSTRUCTION SUCCESSFULLY EXECUTED";
-            }
-        }
-        subPub(PUBLISH, MQTT_TOPIC_INSTRUCTION_RESPONSE, systemMsg);
-
-    }
-    return driveCommand;
-}
-
 
 /* MQTT INTERFACE */
 void System::connectToMQTTServer()
@@ -144,6 +123,28 @@ void System::subPub(const mqttSubState_t &transmissionType, const std::string &t
     if (!errorMsg.empty())std::cout << errorMsg << std::endl;
 }
 
+bool System::validateDriveCommand(const std::string &rC) const
+{
+    const std::optional<std::string> driveCommand = this->mqttBroker->getNextCommand();
+    bool validCommand = false;
+
+    if (driveCommand.has_value())
+    {
+        std::string systemMsg = "INSTRUCTION FAILED.";
+
+        if (driveCommand == "OPEN" || driveCommand == "CLOSE" || driveCommand == "REVERSE")
+        {
+            if (driveCommand == rC)
+            {
+                systemMsg = "INSTRUCTION SUCCESSFULLY EXECUTED";
+                validCommand = true;
+            }
+        }
+        subPub(PUBLISH, MQTT_TOPIC_INSTRUCTION_RESPONSE, systemMsg);
+
+    }
+    return validCommand;
+}
 
 
 /* EEPROM INTERFACE */

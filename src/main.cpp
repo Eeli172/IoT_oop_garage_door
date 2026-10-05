@@ -103,7 +103,7 @@ int main()
             {
             case CLOSED:
                 // press sw1 to open
-                if (queue_try_remove(&sw1EventQ, &queueDummy) || sys->getDriveCommand("OPEN") == "OPEN")
+                if (queue_try_remove(&sw1EventQ, &queueDummy) || sys->validateDriveCommand("OPEN"))
                 {
                     sys->setDoorStates(IN_BETWEEN); // PREVIOUS-STATE = CLOSED, CURRENT_STATE = IN_BETWEEN
                     sys->subPub(PUBLISH, MQTT_TOPIC_DOOR_STATE, "IN_BETWEEN");
@@ -115,7 +115,7 @@ int main()
                 // Door is stopped because of STUCK or SW1.
                 if (sys->getWaitingForCommand())
                 {
-                    if (queue_try_remove(&sw1EventQ, &queueDummy) || sys->getDriveCommand("REVERSE") == "REVERSE")
+                    if (queue_try_remove(&sw1EventQ, &queueDummy) || sys->validateDriveCommand("REVERSE"))
                     {
                         sys->setWaitingForCommand(false);
                         stepperMotor->clearErrorState();
@@ -132,12 +132,7 @@ int main()
                 if (stepperMotor->getErrorState())
                 {
                     //  printf("STUCK in between\n");
-                    sys->subPub(
-                        PUBLISH,
-                        MQTT_TOPIC_ERROR_STATE,
-                        "STUCK"
-                    );
-
+                    sys->subPub(PUBLISH,MQTT_TOPIC_ERROR_STATE, "STUCK");
                     sys->setWaitingForCommand(true);
                     // sys->setCalibState(NOT_CALIBRATED); 
                     break;
@@ -177,7 +172,7 @@ int main()
 
             case OPEN:
                 // press sw1 to close
-                if (queue_try_remove(&sw1EventQ, &queueDummy) || sys->getDriveCommand("CLOSE") == "CLOSE")
+                if (queue_try_remove(&sw1EventQ, &queueDummy) || sys->validateDriveCommand("CLOSE"))
                 {
                     sys->setDoorStates(IN_BETWEEN); // PREVIOUS-STATE = OPEN, CURRENT_STATE = IN_BETWEEN
                     sys->subPub(PUBLISH, MQTT_TOPIC_DOOR_STATE, "IN_BETWEEN");
