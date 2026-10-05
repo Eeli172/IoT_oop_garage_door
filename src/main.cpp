@@ -113,62 +113,49 @@ int main()
             case IN_BETWEEN:
 
                 // Door is stopped because of STUCK or SW1.
-                if (sys->getWaitingForCommand())
+                if (stoppedBySw1 || stepperMotor->getErrorState())
                 {
                     if (queue_try_remove(&sw1EventQ, &queueDummy) || sys->validateDriveCommand("REVERSE"))
                     {
-                        sys->setWaitingForCommand(false);
-                        stepperMotor->clearErrorState();
+                        if (stepperMotor->getErrorState())
+                        {
+                            sys->subPub(PUBLISH,MQTT_TOPIC_ERROR_STATE, "STUCK WAS DETECTED");
+                            stepperMotor->clearErrorState();
+                            /* sys->setCalibState(NOT_CALIBRATED);
+                             * sys->setDoorStates(CLOSED);
+                             * ys->subPub(UNSUBSCRIBE, MQTT_TOPIC_RUN_INSTRUCTIONS, std::nullopt);
+                             */
+                        }
                     }
-                    else
-                    {
-                        break;
-                    }
+                    else break;
                 }
 
                 stoppedBySw1 = stepperMotor->runMotor(*encoder);
 
-                // Motor detected a stuck door.
-                if (stepperMotor->getErrorState())
+                // Motor reached a limit switch { OPEN, CLOSED }
+                if (!stoppedBySw1 && !stepperMotor->getErrorState())
                 {
-                    //  printf("STUCK in between\n");
-                    sys->subPub(PUBLISH,MQTT_TOPIC_ERROR_STATE, "STUCK");
-                    sys->setWaitingForCommand(true);
-                    // sys->setCalibState(NOT_CALIBRATED); 
-                    break;
+                    if (sys->getPreviousDoorState() == CLOSED &&
+                   !stepperMotor->getDirection())
+                    {
+                        sys->setDoorStates(OPEN);
+                        sys->subPub(PUBLISH, MQTT_TOPIC_DOOR_STATE, "OPEN");
+                    }
+                    else if (sys->getPreviousDoorState() == OPEN &&
+                        stepperMotor->getDirection())
+                    {
+                        sys->setDoorStates(CLOSED);
+                        sys->subPub(PUBLISH, MQTT_TOPIC_DOOR_STATE, "CLOSED");
+                    }
+                    else
+                    {
+                        // Door was reversed and reached the same limit.
+                        sys->setDoorStates(sys->getPreviousDoorState());
+                        sys->subPub(PUBLISH, MQTT_TOPIC_DOOR_STATE,
+                                    stepperMotor->getDirection() ? "CLOSED" : "OPEN");
+                    }
                 }
-
-                // Motor was stopped by SW1.
-                if (stoppedBySw1)
-                {
-                    //  printf("stopped by SW1 \n");
-                    sys->setWaitingForCommand(true);
-                    break;
-                }
-
-                // Motor reached a limit switch.
-                if (sys->getPreviousDoorState() == CLOSED &&
-                    !stepperMotor->getDirection())
-                {
-                    sys->setDoorStates(OPEN);
-                    sys->subPub(PUBLISH, MQTT_TOPIC_DOOR_STATE, "OPEN");
-                }
-                else if (sys->getPreviousDoorState() == OPEN &&
-                    stepperMotor->getDirection())
-                {
-                    sys->setDoorStates(CLOSED);
-                    sys->subPub(PUBLISH, MQTT_TOPIC_DOOR_STATE, "CLOSED");
-                }
-                else
-                {
-                    // Door was reversed and reached the same limit.
-                    sys->setDoorStates(sys->getPreviousDoorState());
-                    sys->subPub(PUBLISH, MQTT_TOPIC_DOOR_STATE,
-                                stepperMotor->getDirection() ? "CLOSED" : "OPEN");
-                }
-
                 break;
-
 
             case OPEN:
                 // press sw1 to close
