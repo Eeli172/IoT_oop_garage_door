@@ -112,25 +112,20 @@ int main()
                     sys->setCalibStateAndSave(NOT_CALIBRATED);
                     manualStop = false;
                 }
-
-                // Motor reached a limit switch { OPEN, CLOSED }
-                if (!manualStop && !stepperMotor->getErrorState())
+                else if (!manualStop) // Motor reached a limit switch { OPEN, CLOSED }
                 {
-                    if (sys->getPreviousDoorState() == CLOSED &&
-                   !stepperMotor->getDirection())
+                    if (sys->getPreviousDoorState() == CLOSED && !stepperMotor->getDirection())
                     {
                         sys->setDoorStatesAndSave(OPEN);
                         sys->subPub(PUBLISH, MQTT_TOPIC_DOOR_STATE, "OPEN");
                     }
-                    else if (sys->getPreviousDoorState() == OPEN &&
-                        stepperMotor->getDirection())
+                    else if (sys->getPreviousDoorState() == OPEN && stepperMotor->getDirection())
                     {
                         sys->setDoorStatesAndSave(CLOSED);
                         sys->subPub(PUBLISH, MQTT_TOPIC_DOOR_STATE, "CLOSED");
                     }
-                    else
+                    else // Door was reversed and reached the same limit.
                     {
-                        // Door was reversed and reached the same limit.
                         sys->setDoorStatesAndSave(sys->getPreviousDoorState());
                         sys->subPub(PUBLISH, MQTT_TOPIC_DOOR_STATE,
                                     stepperMotor->getDirection() ? "CLOSED" : "OPEN");
