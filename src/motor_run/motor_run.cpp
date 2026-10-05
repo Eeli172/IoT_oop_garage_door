@@ -30,11 +30,9 @@ Motor::Motor(
                 false,
                 inverted));
     }
-    
     limitSwitches = std::make_unique<Switches>(
         std::vector{PIN_LMSW_MTR_OPEN, PIN_LMSW_ENC_CLOSED}, true, true, true
     );
-
 }
 
 int Motor::InstructionsMatrix[8][4] =
@@ -102,14 +100,15 @@ bool Motor::getDirection() const
 }
 
 
-float Motor::getMtrStpsPerEncder() const {
+float Motor::getMtrStpsPerEncder() const
+{
     return this->movementCalibration.motorStepsPerEncoder;
 }
 
-void Motor::setMtrStpsPerEncder(float steps) {
+void Motor::setMtrStpsPerEncder(float steps)
+{
     this->movementCalibration.motorStepsPerEncoder = steps;
 }
-
 
 
 bool Motor::runMotor(Encoder& encoder)
@@ -121,13 +120,13 @@ bool Motor::runMotor(Encoder& encoder)
     motorStepCounter = 0;
     stepsSinceEncoder = 0;
     errorState = false;
-    
+
     reverseOnPressedLimitSwitch();
 
     limitSwitches->setInterrupt(std::vector{PIN_LMSW_MTR_OPEN, PIN_LMSW_ENC_CLOSED}, true);
 
     while (((direction && !lmswEncStop) ||
-        (!direction && !lmswMtrStop)) &&
+            (!direction && !lmswMtrStop)) &&
         !sw1Stop &&
         !errorState)
     {
@@ -158,8 +157,18 @@ bool Motor::runMotor(Encoder& encoder)
         queue_try_remove(&lmswMtrEventQ, &lmswMtrStop);
         queue_try_remove(&lmswEncEventQ, &lmswEncStop);
     }
-    
+
     limitSwitches->setInterrupt(std::vector{PIN_LMSW_MTR_OPEN, PIN_LMSW_ENC_CLOSED}, false);
+    if (lmswEncStop)
+    {
+        encoder.resetPosition();
+        printf("ENC CLOSED: position reset to 0\n");
+    }
+
+    if (lmswMtrStop)
+    {
+        encoder.setPosition(65);
+    }
 
     stopMotor();
 
@@ -180,7 +189,6 @@ void Motor::stopMotor()
     }
 }
 
-
 void Motor::calibrateMotor(Encoder& encoder)
 {
     calibrated = false;
@@ -188,7 +196,6 @@ void Motor::calibrateMotor(Encoder& encoder)
 
     int totalMotorSteps = 0;
     int totalEncoderSteps = 0;
-
 
     bool reachedMtr(false);
 
@@ -208,45 +215,44 @@ void Motor::calibrateMotor(Encoder& encoder)
         }
 
         // Only stop at MTR after ENC has been touched
-        if (reachedMtr == true  && gpio_get(PIN_LMSW_ENC_CLOSED))
+        if (reachedMtr == true && gpio_get(PIN_LMSW_ENC_CLOSED))
         {
             break;
         }
     }
 
-    
+
     const float ratio =
-    calculateMotorStepsPerEncoder(
-        totalMotorSteps,
-        totalEncoderSteps);
-        
-        movementCalibration.motorStepsPerEncoder = ratio;
+        calculateMotorStepsPerEncoder(
+            totalMotorSteps,
+            totalEncoderSteps);
+
+    movementCalibration.motorStepsPerEncoder = ratio;
     movementCalibration.valid = ratio > 0.0f;
-    
+
     calibrated = movementCalibration.valid;
     errorState = !movementCalibration.valid;
-    
+
     encoder.resetPosition();
     motorStepCounter = 0;
-    
+
     std::cout
-    << "[CALIBRATION] Total Motor: "
-    << totalMotorSteps
-    << " | Total Encoder: "
-    << totalEncoderSteps
-    << " | Ratio: "
-    << ratio
-    << std::endl;
-    
+        << "[CALIBRATION] Total Motor: "
+        << totalMotorSteps
+        << " | Total Encoder: "
+        << totalEncoderSteps
+        << " | Ratio: "
+        << ratio
+        << std::endl;
+
     // make sure the door is left closed after calibration
     if (gpio_get(PIN_LMSW_MTR_OPEN)) runMotor(encoder);
 }
 
-void Motor::setCalibState(const bool& calibState) {
+void Motor::setCalibState(const bool& calibState)
+{
     this->calibrated = calibState;
 }
-
-
 
 float Motor::calculateMotorStepsPerEncoder(
     int motorSteps,
@@ -260,13 +266,10 @@ float Motor::calculateMotorStepsPerEncoder(
     return static_cast<float>(motorSteps) / encoderSteps;
 }
 
-
-
 bool Motor::stuckDetectionEnabled() const
 {
     return calibrated && movementCalibration.motorStepsPerEncoder > 0.0f;
 }
-
 
 void Motor::checkForStuck()
 {
@@ -286,8 +289,6 @@ void Motor::checkForStuck()
     }
 }
 
-
-
 //used in main and sets steps to 0
 void Motor::clearErrorState()
 {
@@ -296,11 +297,8 @@ void Motor::clearErrorState()
 }
 
 
-
 // Errors and led
 bool Motor::getErrorState() const
 {
     return errorState;
 }
-
-

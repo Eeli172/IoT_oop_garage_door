@@ -30,6 +30,8 @@ public:
 
     int getPosition() const;
 
+    void setPosition(int position);
+
 
 private:
     std::unique_ptr<CommonGPIO> pinA;
