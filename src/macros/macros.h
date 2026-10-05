@@ -12,7 +12,6 @@
 
 // CALIBRATION
 #define STUCK_STEP_TOLERANCE 200 //safe minimum so it will not stop randomly 150
-#define CALIBRATION_RUNS 2
 
 // MQTT
 #define MQTT_BROKER_PORT 1883

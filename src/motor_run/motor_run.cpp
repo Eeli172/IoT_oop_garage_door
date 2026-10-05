@@ -121,8 +121,8 @@ bool Motor::runMotor(Encoder& encoder)
 
     while (((direction && !lmswEncStop) ||
         (!direction && !lmswMtrStop)) &&
-       !sw1Stop &&
-       !errorState)
+        !sw1Stop &&
+        !errorState)
     {
         queue_try_remove(&sw1EventQ, &sw1Stop);
 
@@ -177,53 +177,56 @@ void Motor::calibrateMotor(Encoder& encoder)
     calibrated = false;
     errorState = false;
 
-    float totalRatio = 0.0f;
-    bool calibrationValid = true;
+    int totalMotorSteps = 0;
+    int totalEncoderSteps = 0;
 
-    for (int run = 0; run < CALIBRATION_RUNS; ++run)
+
+    bool reachedMtr(false);
+
+    for (int run = 0; run < 2; ++run)
     {
         encoder.resetPosition();
         motorStepCounter = 0;
 
         runMotor(encoder);
 
-        const int encoderSteps = std::abs(encoder.getPosition());
+        totalMotorSteps += motorStepCounter;
+        totalEncoderSteps += std::abs(encoder.getPosition());
 
-        const float ratio = calculateMotorStepsPerEncoder( motorStepCounter, encoderSteps);
-
-        totalRatio += ratio;
-
-        if (ratio <= 0.0f)
+        if (gpio_get(PIN_LMSW_MTR))
         {
-            calibrationValid = false;
+            reachedMtr = true;
         }
 
-        std::cout
-            << "[CALIBRATION] Run "
-            << run + 1
-            << " | Motor: "
-            << motorStepCounter
-            << " | Encoder: "
-            << encoderSteps
-            << " | Ratio: "
-            << ratio
-            << std::endl;
+        // Only stop at MTR after ENC has been touched
+        if (reachedMtr == true  && gpio_get(PIN_LMSW_ENC))
+        {
+            break;
+        }
+
     }
 
-    movementCalibration.motorStepsPerEncoder = totalRatio / CALIBRATION_RUNS;
-    
-    movementCalibration.valid = calibrationValid && movementCalibration.motorStepsPerEncoder > 0.0f;
+    const float ratio =
+        calculateMotorStepsPerEncoder(
+            totalMotorSteps,
+            totalEncoderSteps);
+
+    movementCalibration.motorStepsPerEncoder = ratio;
+    movementCalibration.valid = ratio > 0.0f;
 
     calibrated = movementCalibration.valid;
-
     errorState = !movementCalibration.valid;
 
     encoder.resetPosition();
     motorStepCounter = 0;
 
     std::cout
-        << "[CALIBRATION] Average ratio: "
-        << movementCalibration.motorStepsPerEncoder
+        << "[CALIBRATION] Total Motor: "
+        << totalMotorSteps
+        << " | Total Encoder: "
+        << totalEncoderSteps
+        << " | Ratio: "
+        << ratio
         << std::endl;
 }
 
