@@ -27,11 +27,11 @@ void commonIsr(const uint gpio, const uint32_t eventMask)
             {
                 switch (gpio)
                 {
-                    case PIN_LMSW_ENC:
+                    case PIN_LMSW_ENC_CLOSED:
                         queue_try_add(&lmswEncEventQ, &value);
                         break;
 
-                    case PIN_LMSW_MTR:
+                    case PIN_LMSW_MTR_OPEN:
                         queue_try_add(&lmswMtrEventQ, &value);
                         break;
 

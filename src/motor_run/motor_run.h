@@ -30,16 +30,16 @@ public:
     void setMtrStpsPerEncder(float steps);
 
     void calibrateMotor(Encoder& encoder);
+    void setCalibState(const bool& calibState);
 
     void clearErrorState();
     bool getErrorState() const;
 
 private:
-
-    static int InstructionsMatrix[8][4];
-
     std::vector<std::unique_ptr<CommonGPIO>> motorCoils;
+    std::unique_ptr<Switches> limitSwitches;
 
+    static int InstructionsMatrix[8][4];    
     int step;
     int motorStepCounter;
     bool direction;
@@ -48,7 +48,7 @@ private:
     int stepsSinceEncoder;
 
 
-    MovementCalibration movementCalibration;
+    MovementCalibration_t movementCalibration;
 
 
     float calculateMotorStepsPerEncoder(

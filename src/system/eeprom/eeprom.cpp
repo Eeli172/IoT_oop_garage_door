@@ -1,67 +1,189 @@
 #include "eeprom.h"
 #include "hardware/i2c.h"
-#include "types/types.h"
-#include <hardware/gpio.h>
-#include <hardware/structs/io_bank0.h>
+#include "hardware/gpio.h"
+#include "../../macros/macros.h"
+#include <array>
+#include <cstring>
 #include <iostream>
 
 
+
+/* ############## P U B L I C ############## */
+
 Eeprom::Eeprom() {
-    init_i2c_hw();
+    init_i2c_hardware();
 }
 
-
-int Eeprom::write(const uint16_t address, const uint data)
-{
-    payload_control_t payload;
-    payload.data_length = count_bytes(data);
-    payload.data_length *= 2; // original and inverted values
-    
-    if (payload.data_length == EEPROM_BYTES)
-    {
-        payload.data_array[0] = (uint8_t)data;
-        payload.data_array[1] = ~payload.data_array[0];
-    }
-    else
-    {
-        std::cerr << "[ERROR] --> EEPROM: wrong amount of bytes." << std::endl;
-        return -1;
-    }
-    
-    package_data(payload.data_array, payload.data_length, payload.payload_array, address);
-    payload.payload_length = payload.data_length + ADDRESS_BYTES;
-    
-    if (save_data(payload.payload_array, payload.payload_length) != payload.payload_length)
-    {
-        printf("[ERROR] --> Program Eeprom save failed at MEM_ADD: %X\n", address);
-        return -1;
-    }
-    
-    return 0;
-}
-int Eeprom::read(uint16_t addr, int* value) {
-    const uint8_t memory_address[ADDRESS_BYTES] = {
-        static_cast<uint8_t>(addr >> 8 & 0xFF), 
-        static_cast<uint8_t>(addr & 0xFF)
+/*
+Write 2 bytes: original and inverted
+Return:
+    succeed --> true
+    fail --> false
+*/
+bool Eeprom::write_byte(uint16_t memory_address, uint8_t data) {
+    std::array<uint8_t, EEPROM_PAYLOAD_SIZE_BYTE> payload = {
+        static_cast<uint8_t>((memory_address >> BYTE_BITS) & 0xFF),
+        static_cast<uint8_t>(memory_address & 0xFF),
+        data,
+        static_cast<uint8_t>(~data)
     };
-    uint8_t data_array[EEPROM_BYTES];
 
-    read_data(data_array, EEPROM_BYTES, memory_address);
-
-
-    if (validate_state(data_array, EEPROM_BYTES))
-    {
-        *value = (int) data_array[0];
-        return 0;
+    if (!save_data(payload)) {
+        std::cerr << "[ERROR-EEPROM] --> write_byte: FAILED" << std::endl;
+        return false;
     }
 
-    else { printf("Previous setting not found at EEPROM\n"); }
+    return true;
+}
 
-    return 1;
+/*
+Read 2 bytes: value & ~value @ memory_address and validate. 
+Return __validated value__ || in case of failure __std::nullopt__
+*/
+std::optional<uint8_t> Eeprom::read_byte(uint16_t memory_address) const {
+    std::array<uint8_t, EEPROM_BUFFER_SIZE_BYTE> buffer{};
+    
+    if (!read_data(memory_address, buffer)) {
+        std::cerr << "[ERROR-EEPROM] --> read_byte: FAILED" << std::endl;
+        return std::nullopt;
+    }
+
+    if (static_cast<uint8_t>(~buffer[0]) != buffer[1]) {
+        std::cerr << "[ERROR-EEPROM] --> read_byte: INVALID DATA" << std::endl;
+        return std::nullopt;
+    }
+
+    return buffer[0];
 }
 
 
-void Eeprom::init_i2c_hw() {
+
+/*
+Write 8 bytes: original 4-byte float and its inverted value
+Return:
+    succeed --> true
+    fail --> false
+*/
+bool Eeprom::write_float(uint16_t memory_address, float data) {
+    std::array<uint8_t, EEPROM_PAYLOAD_SIZE_FLOAT> payload;
+    
+    payload[0] = static_cast<uint8_t>((memory_address >> BYTE_BITS) & 0xFF);
+    payload[1] = static_cast<uint8_t>(memory_address & 0xFF);
+
+    std::memcpy(&payload[2], &data, sizeof(float));
+
+    for (std::size_t i = 0; i < sizeof(float); ++i) {
+        payload[2 + sizeof(float) + i] = static_cast<uint8_t>(~payload[2 + i]);
+    }
+
+    if (!save_data(payload)) {
+        std::cerr << "[ERROR-EEPROM] --> write_float: FAILED" << std::endl;
+        return false;
+    }
+
+    return true;
+}
+
+/*
+Read 8 bytes: value & ~value @ memory_address. 
+Return __validated value__ || in case of failure __std::nullopt__
+*/
+std::optional<float> Eeprom::read_float(uint16_t memory_address) const {
+    std::array<uint8_t, EEPROM_BUFFER_SIZE_FLOAT> buffer{};
+    
+    if (!read_data(memory_address, buffer)) {
+        std::cerr << "[ERROR-EEPROM] --> read_float: FAILED" << std::endl;
+        return std::nullopt;
+    }
+
+    for (std::size_t i = 0; i < sizeof(float); ++i) {
+        if (static_cast<uint8_t>(~buffer[i]) != buffer[i + sizeof(float)]) {
+            std::cerr << "[ERROR-EEPROM] --> read_float: INVALID DATA" << std::endl;
+            return std::nullopt;
+        }
+    }
+
+    float value{0};
+    std::memcpy(&value, buffer.data(), sizeof(float));
+
+    return value;
+}
+
+
+/* ############## P R I V A T E ############## */
+
+/*
+Write --payload-- into eeporm. 
+Return: 
+    succeed --> true
+    failed --> false
+*/
+bool Eeprom::save_data(std::span<const uint8_t> payload) const {
+    if (!poll_ack_with_timeout_ms(EEPROM_ACK_TIMEOUT_MS)) {
+        std::cerr << "[ERROR-EEPROM] --> save_data: EEPROM busy" << std::endl;
+        return false;
+    }
+    
+    int bytes_written = i2c_write_blocking(
+        I2C_PORT, 
+        I2C_ADDR_EEPROM, 
+        payload.data(), 
+        payload.size(), 
+        false
+    );
+    
+    if (bytes_written != static_cast<int>(payload.size())) {
+        std::cerr << "[ERROR-EEPROM] --> save_data: written wrong number of bytes" << std::endl;
+        return false;
+    }
+    
+    poll_ack_with_timeout_ms(EEPROM_ACK_TIMEOUT_MS);
+    return true;
+}
+
+/*
+Read data from --memory_address-- into --destination-- 
+Return: 
+    succeed --> true
+    failed --> false
+*/
+bool Eeprom::read_data(uint16_t memory_address, std::span<uint8_t> destination) const {
+    if (!poll_ack_with_timeout_ms(EEPROM_ACK_TIMEOUT_MS)) {
+        std::cerr << "[ERROR-EEPROM] --> read_data: EEPROM busy" << std::endl;
+        return false;
+    }
+
+    const std::array<uint8_t, EEPROM_ADDR_BYTES> addr_bytes = {
+        static_cast<uint8_t>((memory_address >> BYTE_BITS) & 0xFF),
+        static_cast<uint8_t>(memory_address & 0xFF)
+    };
+    
+    int written = i2c_write_blocking(
+        I2C_PORT, 
+        I2C_ADDR_EEPROM, 
+        addr_bytes.data(), 
+        addr_bytes.size(), 
+        true
+    );
+    if (written != static_cast<int>(addr_bytes.size())) {
+        std::cerr << "[ERROR-EEPROM] --> read_data: written wrong number of bytes" << std::endl;
+        return false;
+    }
+    
+    int read_bytes = i2c_read_blocking(
+        I2C_PORT, 
+        I2C_ADDR_EEPROM, 
+        destination.data(), 
+        destination.size(), 
+        false
+    );
+    return read_bytes == static_cast<int>(destination.size());
+}
+
+/*
+Initialize I2C hardware
+*/
+void Eeprom::init_i2c_hardware() {
     i2c_init(I2C_PORT, I2C_FREQ);
 
     gpio_set_function(PIN_I2C_SDA, GPIO_FUNC_I2C);
@@ -71,72 +193,31 @@ void Eeprom::init_i2c_hw() {
     gpio_pull_up(PIN_I2C_SCL);
 }
 
-uint Eeprom::package_data(const uint8_t* data_array, const uint data_array_length, uint8_t* payload_array,
-                  const uint16_t memory_address)
-{
-    payload_array[0] = memory_address >> 8 & 0xFF;
-    payload_array[1] = memory_address & 0xFF;
+/*
+Poll ack / block further code execution until:
+    we get an answer from eeprom == eeprom is free from previous write
+    --timeout_ms-- has passed
+Return:
+    ACK received --> true
+    timeout --> false
+*/
+bool Eeprom::poll_ack_with_timeout_ms(uint32_t timeout_ms) const {
+    uint8_t dummy{0};
+    const uint32_t start_time = time_us_32();
 
-    for (uint i = 0; i < data_array_length; i++)
-    {
-        payload_array[i + 2] = data_array[i];
-    }
+    while ((time_us_32() - start_time) < timeout_ms*1000) {
+        int result = i2c_read_timeout_us(
+            I2C_PORT, 
+            I2C_ADDR_EEPROM, 
+            &dummy, 
+            1, 
+            false, 
+            I2C_POLLING_TIMEOUT_US
+        );
 
-    return 0;
-}
-uint Eeprom::save_data(const uint8_t* payload, const uint len)
-{
-    const uint bytes_written = i2c_write_blocking(I2C_PORT, I2C_ADDR_EEPROM, payload, len, false);
-    ack_polling_with_timeout(EEPROM_ACK_TIMEOUT_US);
-
-    return bytes_written;
-}
-uint Eeprom::read_data(uint8_t* data, const uint len, const uint8_t* addr)
-{
-    // SETS THE POINTER INSIDE THE EEPROM TO 16-BIT ADDRESS 0xFFFA (6th last)
-    i2c_write_blocking(I2C_PORT, I2C_ADDR_EEPROM, addr, 2, true);
-    
-    // READS FROM THE MEM ADDRESS POINTED AT
-    return i2c_read_blocking(I2C_PORT, I2C_ADDR_EEPROM, data, len, false);
-}
-bool Eeprom::validate_state(const uint8_t* array, const int array_length)
-{
-    for (int i = 0; i < array_length; i += 2)
-    {
-        // Inverts the uninverted value and compares it to the inverted value
-        if ((uint8_t)~array[i] != array[i + 1])
-        {
-            return false;
+        if (result == 1) {
+            return true;
         }
     }
-    return true;
-}
-uint Eeprom::count_bytes(uint value)
-{
-    uint bytes = 1;
-    while (value > 0xFF)
-    {
-        value = value >> 8;
-        
-        bytes++;
-    }
-    return bytes;
-}
-void Eeprom::ack_polling_with_timeout(uint timeout_us)
-{
-    uint8_t dummy = 0;
-    int read_bytes = 1;
-    uint32_t start_time_us = time_us_32();
-
-    while ((time_us_32() - start_time_us) < timeout_us)
-    {
-        int result = i2c_read_timeout_us(I2C_PORT, I2C_ADDR_EEPROM, 
-            &dummy, read_bytes, false, I2C_POLLING_TIMEOUT_US);
-
-        if (result == read_bytes) 
-        {
-            // printf("EEPROM_ACK_POLL_TIME_US: %d\n", time_us_32()-start_time_us);
-            return;
-        }
-    }
+    return false;
 }

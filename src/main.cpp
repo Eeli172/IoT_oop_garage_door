@@ -28,41 +28,25 @@ int main()
     const auto stepperMotor = std::make_shared<Motor>(
         std::vector{PIN_COIL_1, PIN_COIL_2, PIN_COIL_3, PIN_COIL_4}, false
     );
-    const auto userButtons = std::make_unique<Switches>(
+    const auto userButtons = std::make_shared<Switches>(
         std::vector{PIN_SW0, PIN_SW1, PIN_SW2}, true, true, true
-    );
-    const auto limitSwitches = std::make_unique<Switches>(
-        std::vector{PIN_LMSW_MTR, PIN_LMSW_ENC}, true, true, true
     );
     const auto encoder = std::make_unique<Encoder>(
         PIN_ENCODER_A, PIN_ENCODER_B, false
     );
 
-
-
     initQueues();
 
     encoder->enableInterrupts();
-    userButtons->setInterrupt(std::vector{PIN_SW1}, true);
-    limitSwitches->setInterrupt(std::vector{PIN_LMSW_MTR, PIN_LMSW_ENC}, true);
 
     sys->setMotor(stepperMotor);
+    sys->setButtons(userButtons);
     sys->createStatusLeds();
     sys->connectToMQTTServer();
-
-    /*
     sys->loadSystem();
-    sleep_ms(5);
-    sys->setCalibState(NOT_CALIBRATED);
-    std::cout << "calib: " << sys->getCalibState() << std::endl;
-    sleep_ms(5);
-    std::cout << "door: " << sys->getCurrentDoorState() << std::endl;
-    sleep_ms(5);
-    //stepperMotor->setMtrStpsPerEncder(0);
-    std::cout << "steps: " << stepperMotor->getMtrStpsPerEncder() << std::endl;
-    sleep_ms(5);
-    */
 
+    // EEPROM TESTAUSTA VARTEN
+    //sys->printStates();
 
     bool queueDummy;
     bool stoppedBySw1;
@@ -72,27 +56,27 @@ int main()
         switch (sys->getCalibState())
         {
         case NOT_CALIBRATED:
+
+            userButtons->setInterrupt(std::vector{PIN_SW1}, false);
             if (gpio_get(PIN_SW0) && gpio_get(PIN_SW2))
             {
-                sys->setCalibState(CALIBRATING);
+                sys->setCalibStateAndSave(CALIBRATING);
             }
             break;
 
 
         case CALIBRATING:
-            userButtons->setInterrupt(std::vector{PIN_SW1}, false);
-            limitSwitches->setInterrupt(std::vector{PIN_LMSW_MTR, PIN_LMSW_ENC}, true);
-            
+
             std::cout << "Calibration: started" << std::endl;
             stepperMotor->calibrateMotor(*encoder);
+            sys->saveSystem(EEPROM_ADDR_STEPS_PER_ENCODER);
+            sys->setDoorStatesAndSave(CLOSED); 
             std::cout << "Calibration: finished" << std::endl;
-
-            //sys->saveStepsPerEncoder();
-
+            
             userButtons->setInterrupt(std::vector{PIN_SW1}, true);
-            sys->setCalibState(CALIBRATED);
-            sys->subPub(PUBLISH, MQTT_TOPIC_SYSTEM_STATE, "CALIBRATED");
             sys->subPub(SUBSCRIBE, MQTT_TOPIC_RUN_INSTRUCTIONS, std::nullopt);
+            sys->subPub(PUBLISH, MQTT_TOPIC_SYSTEM_STATE, "CALIBRATED");
+            sys->setCalibStateAndSave(CALIBRATED);
             break;
 
 
@@ -102,10 +86,10 @@ int main()
             switch (sys->getCurrentDoorState())
             {
             case CLOSED:
-                // press sw1 to open
+
                 if (queue_try_remove(&sw1EventQ, &queueDummy) || sys->validateDriveCommand("OPEN"))
                 {
-                    sys->setDoorStates(IN_BETWEEN); // PREVIOUS-STATE = CLOSED, CURRENT_STATE = IN_BETWEEN
+                    sys->setDoorStatesAndSave(IN_BETWEEN); // PREVIOUS-STATE = CLOSED, CURRENT_STATE = IN_BETWEEN
                     sys->subPub(PUBLISH, MQTT_TOPIC_DOOR_STATE, "IN_BETWEEN");
                 }
                 break;
@@ -120,10 +104,10 @@ int main()
                         if (stepperMotor->getErrorState())
                         {
                             sys->subPub(PUBLISH,MQTT_TOPIC_ERROR_STATE, "STUCK WAS DETECTED");
-                            stepperMotor->clearErrorState();
-                            /* sys->setCalibState(NOT_CALIBRATED);
-                             * sys->setDoorStates(CLOSED);
-                             * ys->subPub(UNSUBSCRIBE, MQTT_TOPIC_RUN_INSTRUCTIONS, std::nullopt);
+                            stepperMotor->clearErrorState(); // tätä ei tarvii, errorState nollataan calibrateMotorissa ja stepit nollataan runMotorissa
+                            /* sys->setCalibStateAndSave(NOT_CALIBRATED);
+                             * sys->setDoorStatesAndSave(CLOSED);
+                             * sys->subPub(UNSUBSCRIBE, MQTT_TOPIC_RUN_INSTRUCTIONS, std::nullopt);
                              */
                         }
                     }
@@ -138,19 +122,19 @@ int main()
                     if (sys->getPreviousDoorState() == CLOSED &&
                    !stepperMotor->getDirection())
                     {
-                        sys->setDoorStates(OPEN);
+                        sys->setDoorStatesAndSave(OPEN);
                         sys->subPub(PUBLISH, MQTT_TOPIC_DOOR_STATE, "OPEN");
                     }
                     else if (sys->getPreviousDoorState() == OPEN &&
                         stepperMotor->getDirection())
                     {
-                        sys->setDoorStates(CLOSED);
+                        sys->setDoorStatesAndSave(CLOSED);
                         sys->subPub(PUBLISH, MQTT_TOPIC_DOOR_STATE, "CLOSED");
                     }
                     else
                     {
                         // Door was reversed and reached the same limit.
-                        sys->setDoorStates(sys->getPreviousDoorState());
+                        sys->setDoorStatesAndSave(sys->getPreviousDoorState());
                         sys->subPub(PUBLISH, MQTT_TOPIC_DOOR_STATE,
                                     stepperMotor->getDirection() ? "CLOSED" : "OPEN");
                     }
@@ -158,14 +142,26 @@ int main()
                 break;
 
             case OPEN:
-                // press sw1 to close
+
                 if (queue_try_remove(&sw1EventQ, &queueDummy) || sys->validateDriveCommand("CLOSE"))
                 {
-                    sys->setDoorStates(IN_BETWEEN); // PREVIOUS-STATE = OPEN, CURRENT_STATE = IN_BETWEEN
+                    sys->setDoorStatesAndSave(IN_BETWEEN); // PREVIOUS-STATE = OPEN, CURRENT_STATE = IN_BETWEEN
                     sys->subPub(PUBLISH, MQTT_TOPIC_DOOR_STATE, "IN_BETWEEN");
                 }
                 break;
             }
         }
+
+        /*
+        // EEPROM TESTAUSTA VARTEN
+        if (gpio_get(PIN_SW2)) {
+            sys->printStates();
+            while (gpio_get(PIN_SW2));
+            sleep_ms(200);
+            
+            sys->loadSystem();
+            sys->printStates();
+        }
+        */
     }
 }

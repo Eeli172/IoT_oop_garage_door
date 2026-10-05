@@ -1,5 +1,4 @@
 /* STL */
-#include <cmath>
 #include <iostream>
 #include <memory>
 #include <ostream>
@@ -26,22 +25,42 @@ eeprom(std::make_unique<Eeprom>())
 void System::setCalibState(const calibrationState_t& state)
 {
     this->calibState = state;
-    //this->saveSystem(EEPROM_ADDR_CALIBRATION_STATE);
-    std::cout << "CALIB STATE: " << state << std::endl;
+    if (state == CALIBRATED) {
+        this->motor->setCalibState(true);
+    } 
+    else if (state == NOT_CALIBRATED) {
+        this->motor->setCalibState(false);
+    }
+    std::cout << "CALIB STATE SET: " << state << std::endl;
+}
+void System::setCalibStateAndSave(const calibrationState_t& state)
+{
+    this->setCalibState(state);
+    this->saveSystem(EEPROM_ADDR_CALIBRATION_STATE);
 }
 
 void System::setDoorStates(const doorState_t& state)
 {
     this->previousDoorState = this->currentDoorState;
     this->currentDoorState = state;
-    //this->saveSystem(EEPROM_ADDR_DOOR_STATE);
-    std::cout << "DOOR STATE: " << state << std::endl;
+    std::cout << "DOOR STATE SET: " << state << std::endl;
+}
+void System::setDoorStatesAndSave(const doorState_t& state)
+{
+    this->setDoorStates(state);
+    this->saveSystem(EEPROM_ADDR_DOOR_STATE);
 }
 
 void System::setMotor(const std::shared_ptr<Motor> &mtr)
 {
     this->motor = mtr;
 }
+
+void System::setButtons(const std::shared_ptr<Switches> &btns)
+{
+    this->buttons = btns;
+}
+
 
 void System::setWaitingForCommand(bool waiting)
 {
@@ -148,88 +167,69 @@ bool System::validateDriveCommand(const std::string &rC) const
 
 
 /* EEPROM INTERFACE */
-void System::saveSystem(uint16_t addr, int value, uint16_t addrIncrement) {
+void System::saveSystem(uint16_t addr) {
+    bool value = false;
 
     switch (addr) {
         case EEPROM_ADDR_CALIBRATION_STATE:
-            value = static_cast<int>(this->getCalibState());
+            value = this->eeprom->write_byte(addr, static_cast<uint8_t>(this->getCalibState()));
             break;
 
         case EEPROM_ADDR_DOOR_STATE:
-            value = static_cast<int>(getCurrentDoorState());
+            value = this->eeprom->write_byte(addr, static_cast<uint8_t>(this->getCurrentDoorState()));
             break;
 
         case EEPROM_ADDR_STEPS_PER_ENCODER:
-            addr += addrIncrement;
+            value = this->eeprom->write_float(addr, this->motor->getMtrStpsPerEncder());
             break;
 
         default:
-            std::cerr << "[ERROR-SYSTEM-SAVE] --> invalid memory address" << std::endl;
+            std::cerr << "[ERROR-SYS-SAVE] --> invalid memory address" << std::endl;
     }
-
-    if (this->eeprom->write(addr, value)) {
-        std::cerr << "[ERROR-SYSTEM-SAVE] --> Failed saving" << std::endl;
-    }
-}
-
-
-void System::saveStepsPerEncoder() {
-    uint32_t floatStepsRounded = std::round(FLOAT_MULTIPLIER*motor->getMtrStpsPerEncder());
-
-    for (uint i = 0; i < sizeof(uint32_t); i++) {
-        uint8_t splitSteps = (floatStepsRounded >> (i * BYTE_BITS)) & 0xFF;
-        saveSystem(EEPROM_ADDR_STEPS_PER_ENCODER, splitSteps, i*2);
+    if (!value) {
+        std::cerr << "[ERROR-SYS-SAVE] --> failed saving" << std::endl;
     }
 }
-
 
 
 void System::loadSystem() {
-    int temp{0};
-
-    if (this->eeprom->read(EEPROM_ADDR_CALIBRATION_STATE, &temp)) 
-    {
-        std::cout << "[SYS-LOAD-CALIB_STATE] --> previous value not found" << std::endl;
+    auto calibState = this->eeprom->read_byte(EEPROM_ADDR_CALIBRATION_STATE); // CALIB_STATE
+    
+    if (!calibState.has_value()) {
+        std::cout << "[SYS-LOAD] --> CALIB_STATE: previous value not found" << std::endl;
         return;
     }
-    else
-    {
-        std::cout << "[SYS-LOAD-CALIB_STATE] --> previous value found" << std::endl;
-        this->setCalibState((calibrationState_t) temp);
+
+
+    auto doorState = this->eeprom->read_byte(EEPROM_ADDR_DOOR_STATE); // DOOR_STATE
+    
+    if (!doorState.has_value()) { 
+        std::cout << "[SYS-LOAD] --> DOOR_STATE: previous value not found" << std::endl;
+        return;
+    }
+    if (doorState.value() != OPEN && doorState.value() != CLOSED) {
+        std::cout << "[SYS-LOAD] --> DOOR_STATE: calibration needed" << std::endl;
+        return;
     }
     
 
-    temp = 0; 
-    if (this->eeprom->read(EEPROM_ADDR_DOOR_STATE, &temp)) 
-    {
-        std::cout << "[SYS-LOAD-DOOR_STATE] --> previous value not found" << std::endl;
+    auto stepsPerEncoder = this->eeprom->read_float(EEPROM_ADDR_STEPS_PER_ENCODER); // STEPS_PER_ENCODER 
+
+    if (!stepsPerEncoder.has_value()) {
+        std::cout << "[SYS-LOAD] --> STPS_PER_ENC: previous value not found" << std::endl;
         return;
     }
-    else 
-    {
-        std::cout << "[SYS-LOAD-DOOR_STATE] --> previous value found" << std::endl;
-        if (temp != OPEN && temp != CLOSED) // calibration needed if the door isn't in OPEN or CLOSED state
-        {
-            this->setCalibState(NOT_CALIBRATED);
-            return;
-        }
-        setDoorStates((doorState_t) temp);
+    if (stepsPerEncoder.value() <= 0) {
+        std::cout << "[SYS-LOAD] --> STPS_PER_ENC: calibration needed" << std::endl;
+        return;
     }
-    
 
-    uint32_t stepsPerEnc{0};
-    for (uint i = 0; i < sizeof(uint32_t); i++) {
-        if (this->eeprom->read(EEPROM_ADDR_STEPS_PER_ENCODER+i*2, &temp))
-        {
-            std::cout << "[SYS-LOAD-STPS_PER_ENC] --> previous value not found" << std::endl;
-            return;
-        }
-        else
-        {
-            stepsPerEnc |= (static_cast<uint32_t>(static_cast<uint8_t>(temp)) << (i * BYTE_BITS));
-        }
-    }
-    this->motor->setMtrStpsPerEncder((float)stepsPerEnc/FLOAT_MULTIPLIER);
+    
+    this->setCalibState((calibrationState_t) calibState.value());
+    this->motor->setMtrStpsPerEncder(stepsPerEncoder.value());
+    this->setDoorStates((doorState_t) doorState.value());
+    if (doorState.value() == OPEN) this->motor->reverseDirection();
+    if (calibState.value() == CALIBRATED) this->buttons->setInterrupt(std::vector{PIN_SW1}, true);
 }
 
 
@@ -237,15 +237,26 @@ void System::loadSystem() {
 void System::createStatusLeds()
 {
     this->statusLeds =
-        std::make_shared<StatusLeds>(
+    std::make_shared<StatusLeds>(
         std::vector{
             PIN_LED_1,
             PIN_LED_2,
             PIN_LED_3
         }, weak_from_this());
-}
-
+    }
+    
 void System::updateStatusLeds() const
 {
     statusLeds->updateCall();
+}
+
+// for testing eeprom, will be removed
+void System::printStates() {
+    sleep_ms(20);
+    std::cout << "\ncalib: " << this->getCalibState() << '\n';
+    sleep_ms(20);
+    std::cout << "door: " << this->getCurrentDoorState() << '\n';
+    sleep_ms(20);
+    std::cout << "steps: " << this->motor->getMtrStpsPerEncder() << '\n';
+    sleep_ms(20);
 }

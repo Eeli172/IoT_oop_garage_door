@@ -4,8 +4,10 @@
 /* STL */
 #include <string>
 #include <array>
+#include <optional>
 
 /* CUSTOM HEADERS */
+#include "../../macros/macros.h"
 #include "../wifi/wifi.h"
 #include "types/types.h"
 
@@ -49,7 +51,7 @@ class MQTTManager
     /* MQTT ATTRIBUTES */
     std::array<int, IP_OCTETS> brokerIpOctets;
     bool mqttEnabled;
-    mqtt_information mqttInfo;
+    mqttInformation_t mqttInfo;
 
     // DATA
     std::string nextCommandBuffer; // Holds the next command in line { RUN, STOP } .

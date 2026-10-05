@@ -23,7 +23,9 @@ public:
 
     /* SYSTEM SETTERS */
     void setCalibState(const calibrationState_t& state);
+    void setCalibStateAndSave(const calibrationState_t& state);
     void setDoorStates(const doorState_t& state);
+    void setDoorStatesAndSave(const doorState_t& state);
     void setWaitingForCommand(bool waiting);
 
     /* SYSTEM GETTERS */
@@ -36,20 +38,23 @@ public:
     /* IO DEVICES */
     // MQTT
     void connectToMQTTServer();
-    void subPub(const mqttSubState_t& transmissionType, const std::string& topic,
-        const std::optional<std::string>& msg) const;
+    void subPub(
+        const mqttSubState_t& transmissionType, 
+        const std::string& topic,
+        const std::optional<std::string>& msg
+    ) const;
     bool validateDriveCommand(const std::string &rC) const;
 
-
     // EEPROM
-    void saveSystem(uint16_t addr, int value = 0, uint16_t addrIncrement = 0);
-    void saveStepsPerEncoder();
+    void saveSystem(uint16_t addr);
     void loadSystem();
-
+    void printStates(); // for testing eeprom, will be removed
 
     // MOTOR
     void setMotor(const std::shared_ptr<Motor>& mtr);
 
+    // BUTTONS
+    void setButtons(const std::shared_ptr<Switches>& btns);
 
     // STATUS LEDS
     void createStatusLeds();
@@ -67,6 +72,7 @@ private:
     std::unique_ptr<Eeprom> eeprom;
     std::shared_ptr<StatusLeds> statusLeds;
     std::shared_ptr<Motor> motor;
+    std::shared_ptr<Switches> buttons;
 };
 
 #endif //GARAGE_DOOR_SYS_H

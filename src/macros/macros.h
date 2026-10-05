@@ -7,7 +7,7 @@
 #define WIFI_CONNECTING_TIMEOUT_MS 30000
 #define LED_BLINK_TIMEOUT_MS 500
 #define I2C_POLLING_TIMEOUT_US 100
-#define EEPROM_ACK_TIMEOUT_US 5000
+#define EEPROM_ACK_TIMEOUT_MS 15
 #define MOTOR_STEP_DELAY_MS 1
 
 // CALIBRATION
@@ -25,12 +25,14 @@
 #define MQTT_DEFAULT_MSG "<Initialization complete>"
 
 // EEPROM
-#define EEPROM_BYTES 2 // value, ~value
-#define ADDRESS_BYTES 2 // addr_high_byte, addr_low_byte
-#define MAX_PAYLOAD_SIZE ( EEPROM_BYTES + ADDRESS_BYTES )
 #define EEPROM_ADDR_CALIBRATION_STATE 0x0000 // 0 - 1
 #define EEPROM_ADDR_DOOR_STATE 0x0002 // 2 - 3
 #define EEPROM_ADDR_STEPS_PER_ENCODER 0x0004 // 4 - 11 (4 bytes + inverted)
+#define EEPROM_ADDR_BYTES 2 
+#define EEPROM_PAYLOAD_SIZE_BYTE (EEPROM_ADDR_BYTES + (BYTE * 2)) // (addr + (data + ~data))
+#define EEPROM_PAYLOAD_SIZE_FLOAT (EEPROM_ADDR_BYTES + (FLOAT_BYTES * 2)) // (addr + (data + ~data))
+#define EEPROM_BUFFER_SIZE_BYTE (BYTE * 2) // (data + ~data)
+#define EEPROM_BUFFER_SIZE_FLOAT (FLOAT_BYTES * 2) // (data + ~data)
 
 // I2C
 #define I2C_ADDR_EEPROM 0x50
@@ -39,9 +41,9 @@
 
 // UNIVERSAL
 #define IP_OCTETS 4
+#define BYTE 1
 #define BYTE_BITS 8
-#define FLOAT_MULTIPLIER 1000
-
+#define FLOAT_BYTES sizeof(float)
 
 /* GPIOS */
 // BUTTONS
@@ -51,8 +53,8 @@
 #define SW_AMOUNT 3
 
 // LIMIT SWITCHES (GARAGE DOOR)
-#define PIN_LMSW_MTR 16 // MOTOR'S END
-#define PIN_LMSW_ENC 17 // ENCODER'S END
+#define PIN_LMSW_MTR_OPEN 16 
+#define PIN_LMSW_ENC_CLOSED 17 
 
 // ENCODERS
 #define PIN_ENCODER_A 28

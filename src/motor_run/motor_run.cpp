@@ -30,6 +30,11 @@ Motor::Motor(
                 false,
                 inverted));
     }
+    
+    limitSwitches = std::make_unique<Switches>(
+        std::vector{PIN_LMSW_MTR_OPEN, PIN_LMSW_ENC_CLOSED}, true, true, true
+    );
+
 }
 
 int Motor::InstructionsMatrix[8][4] =
@@ -69,14 +74,14 @@ void Motor::runMotorSteps()
 bool Motor::reverseOnPressedLimitSwitch()
 {
     // Closing while already at closing limit
-    if (direction && !gpio_get(PIN_LMSW_MTR))
+    if (direction && !gpio_get(PIN_LMSW_MTR_OPEN))
     {
         reverseDirection();
         return true;
     }
 
     // Opening while already at opening limit
-    if (!direction && !gpio_get(PIN_LMSW_ENC))
+    if (!direction && !gpio_get(PIN_LMSW_ENC_CLOSED))
     {
         reverseDirection();
         return true;
@@ -116,8 +121,10 @@ bool Motor::runMotor(Encoder& encoder)
     motorStepCounter = 0;
     stepsSinceEncoder = 0;
     errorState = false;
-
+    
     reverseOnPressedLimitSwitch();
+
+    limitSwitches->setInterrupt(std::vector{PIN_LMSW_MTR_OPEN, PIN_LMSW_ENC_CLOSED}, true);
 
     while (((direction && !lmswEncStop) ||
         (!direction && !lmswMtrStop)) &&
@@ -151,6 +158,8 @@ bool Motor::runMotor(Encoder& encoder)
         queue_try_remove(&lmswMtrEventQ, &lmswMtrStop);
         queue_try_remove(&lmswEncEventQ, &lmswEncStop);
     }
+    
+    limitSwitches->setInterrupt(std::vector{PIN_LMSW_MTR_OPEN, PIN_LMSW_ENC_CLOSED}, false);
 
     stopMotor();
 
@@ -193,43 +202,49 @@ void Motor::calibrateMotor(Encoder& encoder)
         totalMotorSteps += motorStepCounter;
         totalEncoderSteps += std::abs(encoder.getPosition());
 
-        if (gpio_get(PIN_LMSW_MTR))
+        if (gpio_get(PIN_LMSW_MTR_OPEN))
         {
             reachedMtr = true;
         }
 
         // Only stop at MTR after ENC has been touched
-        if (reachedMtr == true  && gpio_get(PIN_LMSW_ENC))
+        if (reachedMtr == true  && gpio_get(PIN_LMSW_ENC_CLOSED))
         {
             break;
         }
-
     }
 
+    
     const float ratio =
-        calculateMotorStepsPerEncoder(
-            totalMotorSteps,
-            totalEncoderSteps);
-
-    movementCalibration.motorStepsPerEncoder = ratio;
+    calculateMotorStepsPerEncoder(
+        totalMotorSteps,
+        totalEncoderSteps);
+        
+        movementCalibration.motorStepsPerEncoder = ratio;
     movementCalibration.valid = ratio > 0.0f;
-
+    
     calibrated = movementCalibration.valid;
     errorState = !movementCalibration.valid;
-
+    
     encoder.resetPosition();
     motorStepCounter = 0;
-
+    
     std::cout
-        << "[CALIBRATION] Total Motor: "
-        << totalMotorSteps
-        << " | Total Encoder: "
-        << totalEncoderSteps
-        << " | Ratio: "
-        << ratio
-        << std::endl;
+    << "[CALIBRATION] Total Motor: "
+    << totalMotorSteps
+    << " | Total Encoder: "
+    << totalEncoderSteps
+    << " | Ratio: "
+    << ratio
+    << std::endl;
+    
+    // make sure the door is left closed after calibration
+    if (gpio_get(PIN_LMSW_MTR_OPEN)) runMotor(encoder);
 }
 
+void Motor::setCalibState(const bool& calibState) {
+    this->calibrated = calibState;
+}
 
 
 
