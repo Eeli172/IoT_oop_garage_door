@@ -1,6 +1,7 @@
 #include "motor_run.h"
 
 #include <cmath>
+#include <functional>
 #include <iostream>
 
 #include "../interrupts/interrupts.h"
@@ -115,29 +116,29 @@ void Motor::setMtrStpsPerEncder(float steps)
 }
 
 
-bool Motor::runMotor(Encoder& encoder)
+bool Motor::runMotor(Encoder& encoder, const std::optional<std::function<bool(const std::string &)>> &MqttStop)
 {
     bool lmswMtrStop = false;
     bool lmswEncStop = false;
-    bool sw1Stop = false;
+    bool manualStop = false;
 
     motorStepCounter = 0;
     stepsSinceEncoder = 0;
     errorState = false;
 
     reverseOnPressedLimitSwitch();
-
     limitSwitches->setInterrupt(std::vector{PIN_LMSW_MTR_OPEN, PIN_LMSW_ENC_CLOSED}, true);
 
     while (((direction && !lmswEncStop) ||
-            (!direction && !lmswMtrStop)) &&
-        !sw1Stop &&
-        !errorState)
+            (!direction && !lmswMtrStop))
+            && !manualStop
+            && !errorState)
     {
-        queue_try_remove(&sw1EventQ, &sw1Stop);
+        queue_try_remove(&sw1EventQ, &manualStop);
 
-        if (sw1Stop)
+        if (manualStop || (MqttStop.has_value() && MqttStop.value()("STOP")))
         {
+            manualStop = true;
             break;
         }
 
@@ -181,7 +182,7 @@ bool Motor::runMotor(Encoder& encoder)
         return false;
     }
 
-    return sw1Stop;
+    return manualStop;
 }
 
 
@@ -208,7 +209,7 @@ void Motor::calibrateMotor(Encoder& encoder)
         encoder.resetPosition();
         motorStepCounter = 0;
 
-        runMotor(encoder);
+        runMotor(encoder, std::nullopt);
 
         totalMotorSteps += motorStepCounter;
         totalEncoderSteps += std::abs(encoder.getPosition());
@@ -250,7 +251,7 @@ void Motor::calibrateMotor(Encoder& encoder)
         << std::endl;
 
     // make sure the door is left closed after calibration
-    if (gpio_get(PIN_LMSW_MTR_OPEN)) runMotor(encoder);
+    if (gpio_get(PIN_LMSW_MTR_OPEN)) runMotor(encoder, std::nullopt);
 }
 
 void Motor::setCalibState(const bool& calibState)

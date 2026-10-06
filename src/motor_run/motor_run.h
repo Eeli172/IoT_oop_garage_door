@@ -4,6 +4,8 @@
 /* STL */
 #include <memory>
 #include <vector>
+#include <functional>
+#include <optional>
 
 /* CUSTOM HEADERS */
 #include "../gpios/gpios.h"
@@ -18,7 +20,7 @@ public:
     Motor &operator=(const Motor&) = delete;
 
     void runMotorSteps();
-    bool runMotor(Encoder& encoder);
+    bool runMotor(Encoder& encoder, const std::optional<std::function<bool(const std::string &)>>& MqttStop);
     void stopMotor();
 
     void reverseDirection();

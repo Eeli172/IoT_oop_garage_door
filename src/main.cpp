@@ -122,13 +122,18 @@ int main()
                     }
                 }
 
-                manualStop = stepperMotor->runMotor(*encoder);
+                manualStop = stepperMotor->runMotor(*encoder, [&sys](const std::string& cmd)
+                {
+                    return sys->validateDriveCommand(cmd);
+                });
 
                 if (stepperMotor->getErrorState()) // ERROR --> CALIBRATION NEEDED
                 {
                     userButtons->setInterrupt(std::vector{PIN_SW1}, false);
                     sys->subPub(PUBLISH, MQTT_TOPIC_ERROR_STATE, "STUCK WAS DETECTED");
+                    sys->disconnectFromMQTTServer();
                     sys->setCalibStateAndSave(NOT_CALIBRATED);
+                    manualStop = false;
                     break;
                 }
 

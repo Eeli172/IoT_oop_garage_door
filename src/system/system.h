@@ -39,6 +39,7 @@ public:
     // MQTT
     void connectToWifi() const;
     void connectToMQTTServer() const;
+    void disconnectFromMQTTServer() const;
     void subPub(
         const mqttSubState_t& transmissionType, 
         const std::string& topic,

@@ -86,11 +86,12 @@ bool MQTTManager::establishMQTTClient()
     return errCon == ERR_OK;
 }
 
-bool MQTTManager::disconnectMQTTClient() const
+bool MQTTManager::disconnectMQTTClient()
 {
     if (mqtt_client_is_connected(this->mqttInfo.mqtt_client))
     {
         mqtt_disconnect(this->mqttInfo.mqtt_client);
+        this->mqttEnabled = false;
         return true;
     }
     return false;
