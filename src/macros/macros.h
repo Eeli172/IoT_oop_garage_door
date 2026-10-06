@@ -8,7 +8,7 @@
 #define LED_BLINK_TIMEOUT_MS 500
 #define I2C_POLLING_TIMEOUT_US 100
 #define EEPROM_ACK_TIMEOUT_MS 15
-#define MOTOR_STEP_DELAY_MS 1
+#define MOTOR_STEP_DELAY_US 800
 
 // CALIBRATION
 #define STUCK_STEP_TOLERANCE 200 //safe minimum so it will not stop randomly 150
@@ -28,6 +28,8 @@
 #define EEPROM_ADDR_CALIBRATION_STATE 0x0000 // 0 - 1
 #define EEPROM_ADDR_DOOR_STATE 0x0002 // 2 - 3
 #define EEPROM_ADDR_STEPS_PER_ENCODER 0x0004 // 4 - 11 (4 bytes + inverted)
+#define EEPROM_ADDR_DIRECTION 0x000C //12-13
+
 #define EEPROM_ADDR_BYTES 2 
 #define EEPROM_PAYLOAD_SIZE_BYTE (EEPROM_ADDR_BYTES + (BYTE * 2)) // (addr + (data + ~data))
 #define EEPROM_PAYLOAD_SIZE_FLOAT (EEPROM_ADDR_BYTES + (FLOAT_BYTES * 2)) // (addr + (data + ~data))

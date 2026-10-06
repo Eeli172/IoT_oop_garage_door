@@ -183,6 +183,10 @@ void System::saveSystem(uint16_t addr) {
             value = this->eeprom->write_float(addr, this->motor->getMtrStpsPerEncder());
             break;
 
+        case EEPROM_ADDR_DIRECTION:
+            value = this->eeprom->write_byte(addr, this->motor->getDirection());
+            break;
+
         default:
             std::cerr << "[ERROR-SYS-SAVE] --> invalid memory address" << std::endl;
     }
@@ -194,7 +198,7 @@ void System::saveSystem(uint16_t addr) {
 
 void System::loadSystem() {
     auto calibState = this->eeprom->read_byte(EEPROM_ADDR_CALIBRATION_STATE); // CALIB_STATE
-    
+
     if (!calibState.has_value()) {
         std::cout << "[SYS-LOAD] --> CALIB_STATE: previous value not found" << std::endl;
         return;
@@ -202,18 +206,19 @@ void System::loadSystem() {
 
 
     auto doorState = this->eeprom->read_byte(EEPROM_ADDR_DOOR_STATE); // DOOR_STATE
-    
-    if (!doorState.has_value()) { 
+
+    if (!doorState.has_value()) {
         std::cout << "[SYS-LOAD] --> DOOR_STATE: previous value not found" << std::endl;
         return;
     }
-    if (doorState.value() != OPEN && doorState.value() != CLOSED) {
-        std::cout << "[SYS-LOAD] --> DOOR_STATE: calibration needed" << std::endl;
-        return;
-    }
-    
 
-    auto stepsPerEncoder = this->eeprom->read_float(EEPROM_ADDR_STEPS_PER_ENCODER); // STEPS_PER_ENCODER 
+    // if (doorState.value() != OPEN && doorState.value() != CLOSED) {
+    //     std::cout << "[SYS-LOAD] --> DOOR_STATE: calibration needed" << std::endl;
+    //     return;
+    // }
+
+
+    auto stepsPerEncoder = this->eeprom->read_float(EEPROM_ADDR_STEPS_PER_ENCODER); // STEPS_PER_ENCODER
 
     if (!stepsPerEncoder.has_value()) {
         std::cout << "[SYS-LOAD] --> STPS_PER_ENC: previous value not found" << std::endl;
@@ -224,7 +229,15 @@ void System::loadSystem() {
         return;
     }
 
-    
+
+    auto direction = this->eeprom->read_byte(EEPROM_ADDR_DIRECTION);
+
+    if (!direction.has_value()) {
+        std::cout << "[SYS-LOAD] --> DIRECTION: previous value not found" << std::endl;
+        return;
+    }
+
+
     this->setCalibState((calibrationState_t) calibState.value());
     this->motor->setMtrStpsPerEncder(stepsPerEncoder.value());
     this->setDoorStates((doorState_t) doorState.value());
@@ -233,6 +246,16 @@ void System::loadSystem() {
         this->buttons->setInterrupt(std::vector{PIN_SW1}, true);
         this->enableStatusLeds(true);
     }
+    if (doorState.value() == IN_BETWEEN)
+    {
+        this->setWaitingForCommand(true);
+    }
+    this->motor->setDirection((!direction.value()));
+    std::cout << "[BOOT] doorState="
+          << static_cast<int>(doorState.value())
+          << " direction="
+          << static_cast<int>(direction.value())
+          << std::endl;
 
 }
 

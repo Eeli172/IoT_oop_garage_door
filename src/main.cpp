@@ -86,14 +86,25 @@ int main()
             case CLOSED:
 
                 if (queue_try_remove(&sw1EventQ, &queueDummy) || sys->validateDriveCommand("OPEN"))
-                {
+                {printf("sw1 pressed was closed\n");
                     sys->setDoorStatesAndSave(IN_BETWEEN); // PREVIOUS-STATE = CLOSED, CURRENT_STATE = IN_BETWEEN
+
+                    sys->saveSystem(EEPROM_ADDR_DIRECTION);// saves direction where it going
+
                     sys->subPub(PUBLISH, MQTT_TOPIC_DOOR_STATE, "IN_BETWEEN");
                 }
                 break;
             
                 
             case IN_BETWEEN:
+
+                // after reboot this stops and akss for button before continuing
+                // without that it will automaticlly go to limitswitch
+                if (sys->getWaitingForCommand())
+                {
+                    manualStop = true;
+                    sys->setWaitingForCommand(false);
+                }
 
                 if (manualStop) // STOPPED BY SW1 (or mqtt command?)
                 {
@@ -139,6 +150,9 @@ int main()
                 if (queue_try_remove(&sw1EventQ, &queueDummy) || sys->validateDriveCommand("CLOSE"))
                 {
                     sys->setDoorStatesAndSave(IN_BETWEEN); // PREVIOUS-STATE = OPEN, CURRENT_STATE = IN_BETWEEN
+
+                    sys->saveSystem(EEPROM_ADDR_DIRECTION);// saves direction where it going
+
                     sys->subPub(PUBLISH, MQTT_TOPIC_DOOR_STATE, "IN_BETWEEN");
                 }
                 break;

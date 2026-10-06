@@ -25,7 +25,8 @@ public:
     bool reverseOnPressedLimitSwitch();
 
     bool getDirection() const;
-    
+    void setDirection(bool direction);
+
     float getMtrStpsPerEncder() const;
     void setMtrStpsPerEncder(float steps);
 

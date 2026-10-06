@@ -99,6 +99,10 @@ bool Motor::getDirection() const
     return direction;
 }
 
+void Motor::setDirection(bool direction)
+{
+    this->direction = direction;
+}
 
 float Motor::getMtrStpsPerEncder() const
 {
@@ -139,7 +143,7 @@ bool Motor::runMotor(Encoder& encoder)
 
         runMotorSteps();
 
-        sleep_ms(MOTOR_STEP_DELAY_MS);
+        sleep_us(MOTOR_STEP_DELAY_US);
 
         ++motorStepCounter;
         ++stepsSinceEncoder;
