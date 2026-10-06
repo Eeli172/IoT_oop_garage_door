@@ -20,7 +20,8 @@ void commonIsr(const uint gpio, const uint32_t eventMask)
     }
     else // UPDATE TIMER ON BOTH EDGES
     {
-        if (eventMask == GPIO_IRQ_EDGE_FALL)
+        // if (switch pressed) || (switch pressed but debounce were too fast with the next edge)
+        if ( (eventMask == GPIO_IRQ_EDGE_FALL) || (eventMask == GPIO_IRQ_EDGE_FALL + GPIO_IRQ_EDGE_RISE) )
         {
             // Check debounce for this specific pin
             if (absolute_time_diff_us(debounceTimers[gpio], get_absolute_time()) > INTERRUPT_TIMEOUT_MS * 1000)
@@ -28,18 +29,18 @@ void commonIsr(const uint gpio, const uint32_t eventMask)
                 switch (gpio)
                 {
                     case PIN_LMSW_ENC_CLOSED:
-                        queue_try_add(&lmswEncEventQ, &value);
-                        break;
-
+                    queue_try_add(&lmswEncEventQ, &value);
+                    break;
+                    
                     case PIN_LMSW_MTR_OPEN:
-                        queue_try_add(&lmswMtrEventQ, &value);
-                        break;
-
+                    queue_try_add(&lmswMtrEventQ, &value);
+                    break;
+                    
                     case PIN_SW1:
-                        queue_try_add(&sw1EventQ, &value);
-                        break;
+                    queue_try_add(&sw1EventQ, &value);
+                    break;
                 }
-
+                
             }
         }
         debounceTimers[gpio] = get_absolute_time(); // Update only this pin's timer
