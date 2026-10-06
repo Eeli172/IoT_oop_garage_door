@@ -229,7 +229,7 @@ void System::loadSystem() {
         return;
     }
 
-
+    // direcion load
     auto direction = this->eeprom->read_byte(EEPROM_ADDR_DIRECTION);
 
     if (!direction.has_value()) {
@@ -246,6 +246,9 @@ void System::loadSystem() {
         this->buttons->setInterrupt(std::vector{PIN_SW1}, true);
         this->enableStatusLeds(true);
     }
+
+
+    //waits for sw1 press after reboot
     if (doorState.value() == IN_BETWEEN)
     {
         this->setWaitingForCommand(true);
