@@ -43,14 +43,22 @@ int main()
     sys->setButtons(userButtons);
     sys->createStatusLeds();
     sys->loadSystem();
-    sys->connectToMQTTServer();
+    sys->connectToWifi();
 
     bool queueDummy;
-    bool manualStop{false};
-    
+    bool manualStop = false;
+    absolute_time_t wifiTimeout = 0;
+
     while (true)
     {
         sys->updateStatusLeds();
+
+        if (absolute_time_diff_us(wifiTimeout, get_absolute_time()) >= 1000000 * CHECK_WIFI_STATUS_INTERVAL_SECONDS
+            && sys->getCalibState() == CALIBRATED)
+        {
+            wifiTimeout = get_absolute_time();
+            sys->connectToMQTTServer();
+        }
 
         switch (sys->getCalibState())
         {
@@ -73,9 +81,10 @@ int main()
             
             sys->enableStatusLeds(true);
             userButtons->setInterrupt(std::vector{PIN_SW1}, true);
-            sys->subPub(SUBSCRIBE, MQTT_TOPIC_RUN_INSTRUCTIONS, std::nullopt);
-            sys->subPub(PUBLISH, MQTT_TOPIC_SYSTEM_STATE, "CALIBRATED");
             sys->setCalibStateAndSave(CALIBRATED);
+            sys->connectToMQTTServer();
+            sys->subPub(PUBLISH, MQTT_TOPIC_SYSTEM_STATE, "CALIBRATED");
+            wifiTimeout = get_absolute_time();
             break;
 
 
@@ -86,12 +95,12 @@ int main()
             case CLOSED:
 
                 if (queue_try_remove(&sw1EventQ, &queueDummy) || sys->validateDriveCommand("OPEN"))
-                {printf("sw1 pressed was closed\n");
+                {
                     sys->setDoorStatesAndSave(IN_BETWEEN); // PREVIOUS-STATE = CLOSED, CURRENT_STATE = IN_BETWEEN
 
-                    sys->saveSystem(EEPROM_ADDR_DIRECTION);// saves direction where it going
+                    sys->saveSystem(EEPROM_ADDR_DIRECTION); // Saves the new direction to EEPROM (IN_BETWEEN)
 
-                    sys->subPub(PUBLISH, MQTT_TOPIC_DOOR_STATE, "IN_BETWEEN");
+                    sys->subPub(PUBLISH, MQTT_TOPIC_DOOR_STATE, "IN_BETWEEN"); // Publishes the state change via MQTT
                 }
                 break;
             
@@ -99,7 +108,7 @@ int main()
             case IN_BETWEEN:
 
                 // after reboot this stops and akss for button before continuing
-                // without that it will automaticlly go to limitswitch
+                // without that it will automatically go to limitswitch
                 if (sys->getWaitingForCommand())
                 {
                     manualStop = true;
@@ -119,11 +128,11 @@ int main()
                 {
                     userButtons->setInterrupt(std::vector{PIN_SW1}, false);
                     sys->subPub(PUBLISH, MQTT_TOPIC_ERROR_STATE, "STUCK WAS DETECTED");
-                    sys->subPub(UNSUBSCRIBE, MQTT_TOPIC_RUN_INSTRUCTIONS, std::nullopt);
                     sys->setCalibStateAndSave(NOT_CALIBRATED);
-                    manualStop = false;
+                    break;
                 }
-                else if (!manualStop) // Motor reached a limit switch { OPEN, CLOSED }
+
+                if (!manualStop) // Motor reached a limit switch { OPEN, CLOSED }
                 {
                     if (sys->getPreviousDoorState() == CLOSED && !stepperMotor->getDirection())
                     {
@@ -151,9 +160,9 @@ int main()
                 {
                     sys->setDoorStatesAndSave(IN_BETWEEN); // PREVIOUS-STATE = OPEN, CURRENT_STATE = IN_BETWEEN
 
-                    sys->saveSystem(EEPROM_ADDR_DIRECTION);// saves direction where it going
+                    sys->saveSystem(EEPROM_ADDR_DIRECTION); // Saves the new direction to EEPROM (IN_BETWEEN)
 
-                    sys->subPub(PUBLISH, MQTT_TOPIC_DOOR_STATE, "IN_BETWEEN");
+                    sys->subPub(PUBLISH, MQTT_TOPIC_DOOR_STATE, "IN_BETWEEN"); // Publishes the state change via MQTT
                 }
                 break;
             }

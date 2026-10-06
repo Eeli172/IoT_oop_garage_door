@@ -1,7 +1,4 @@
 #include "encoder.h"
-
-#include <iostream>
-
 #include "hardware/gpio.h"
 #include "interrupts/interrupts.h"
 
@@ -64,20 +61,20 @@ void Encoder::updatePosition()
     {
         ++encoderPosition;
 
-        std::cout
+        /* std::cout
             << "[ENCODER] Clockwise | position = "
             << encoderPosition
-            << std::endl;
+            << std::endl; */
 
     }
     else
     {
         --encoderPosition;
 
-        std::cout
+        /*std::cout
             << "[ENCODER] Counter-clockwise | position = "
             << encoderPosition
-            << std::endl;
+            << std::endl; */
 
     }
 }
@@ -86,7 +83,7 @@ void Encoder::resetPosition()
 {
     encoderPosition = 0;
 
-    std::cout << "[ENCODER] Position reset to 0" << std::endl;
+    /* std::cout << "[ENCODER] Position reset to 0" << std::endl; */
 }
 
 int Encoder::getPosition() const

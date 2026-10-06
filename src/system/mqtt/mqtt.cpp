@@ -40,11 +40,11 @@ bool MQTTManager::initWiFi()
 
     if (this->wiFiManager.connectWifi())
     {
-        std::cout << "[OK] --> Wi-Fi connection successful." << std::endl;
+        std::cout << "[WIFI-SYSTEM-STATUS] --> Wi-Fi connection successful." << std::endl;
         return true;
     }
 
-    std::cout << "[ERROR] --> Wi-Fi connection failed." << std::endl;
+    std::cout << "[WIFI-SYSTEM-STATUS] --> Wi-Fi connection failure." << std::endl;
     return false;
 }
 
@@ -86,22 +86,22 @@ bool MQTTManager::establishMQTTClient()
     return errCon == ERR_OK;
 }
 
+bool MQTTManager::disconnectMQTTClient() const
+{
+    if (mqtt_client_is_connected(this->mqttInfo.mqtt_client))
+    {
+        mqtt_disconnect(this->mqttInfo.mqtt_client);
+        return true;
+    }
+    return false;
+}
+
 
 /* UTILITY METHODS */
 
 bool MQTTManager::getMqttStatus() const
 {
     return this->mqttEnabled;
-}
-
-void MQTTManager::setTopic(const std::string& newTopic)
-{
-    if (!this->currentTopic.empty())
-    {
-        this->previousTopic = this->currentTopic;
-    }
-
-    this->currentTopic = newTopic;
 }
 
 std::optional<std::string> MQTTManager::getNextCommand()
@@ -113,6 +113,16 @@ std::optional<std::string> MQTTManager::getNextCommand()
         return tempCommandBuffer;
     }
     return std::nullopt;
+}
+
+void MQTTManager::setTopic(const std::string& newTopic)
+{
+    if (!this->currentTopic.empty())
+    {
+        this->previousTopic = this->currentTopic;
+    }
+
+    this->currentTopic = newTopic;
 }
 
 void MQTTManager::mqttIncomingPublishCb(void *arg, const char *topic, u32_t tot_len)
@@ -168,7 +178,7 @@ void MQTTManager::mqttPublishCb(void* arg, err_t result)
 /* MQTT CONNECTION SETUP */
 void MQTTManager::mqttConnectCb(mqtt_client_t* client, void *arg, mqtt_connection_status_t status)
 {
-    if (status != MQTT_CONNECT_ACCEPTED && status != MQTT_CONNECT_DISCONNECTED)
+    if (status != MQTT_CONNECT_ACCEPTED && status != MQTT_CONNECT_TIMEOUT && status != MQTT_CONNECT_DISCONNECTED)
     {
         printf("[MQTT-CONNECT-ERROR-CB] --> Connection failed with status: %d\n", status);
         return;
@@ -178,7 +188,7 @@ void MQTTManager::mqttConnectCb(mqtt_client_t* client, void *arg, mqtt_connectio
     {
         if (status == MQTT_CONNECT_ACCEPTED)
         {
-            printf("[MQTT-CONNECT-ERROR-CB] --> MQTT Connection successful.\n");
+            printf("[MQTT-CONNECT-CB] --> MQTT Connection successful.\n");
             self->mqttEnabled = true;
 
             // [1]. Set callbacks for incoming publishes and data handling from a subscribed topic
@@ -186,17 +196,15 @@ void MQTTManager::mqttConnectCb(mqtt_client_t* client, void *arg, mqtt_connectio
                 mqttIncomingPublishCb,
                 mqttIncomingDataCb,
                 self);
+
+            self->setTopic(MQTT_TOPIC_RUN_INSTRUCTIONS);
+            self->subscribeToTopic(SUBSCRIBE);
         }
 
         else
         {
             self->mqttEnabled = false;
-            printf("[MQTT-CONNECT-ERROR-CB] --> Connection disconnected, attempting reconnection, status: %d\n", status);
-
-            if (!self->establishMQTTClient())
-            {
-                printf("[MQTT-SYSTEM-STATUS] --> Reattempt to connect to an MQTT broker failed");
-            }
+            printf("[MQTT-CONNECT-ERROR-CB] --> Connection disconnected, attempting reconnection in a moment, status: %d\n", status);
         }
     }
 }

@@ -22,6 +22,7 @@ class MQTTManager
     /* MQTT METHODS */
     // ESTABLISHING A CLIENT INSTANCE + CALLBACK FOR SUCCESSFUL CONNECTION TO BROKER
     bool establishMQTTClient();
+    [[nodiscard]] bool disconnectMQTTClient() const;
     static void mqttConnectCb(mqtt_client_t *client, void *arg, mqtt_connection_status_t status);
 
     // SUBSCRIBING TO TOPIC + CALLBACK FOR SUCCESSFUL SUBSCRIBE

@@ -33,6 +33,7 @@ void System::setCalibState(const calibrationState_t& state)
     }
     std::cout << "CALIB STATE SET: " << state << std::endl;
 }
+
 void System::setCalibStateAndSave(const calibrationState_t& state)
 {
     this->setCalibState(state);
@@ -45,6 +46,7 @@ void System::setDoorStates(const doorState_t& state)
     this->currentDoorState = state;
     std::cout << "DOOR STATE SET: " << state << std::endl;
 }
+
 void System::setDoorStatesAndSave(const doorState_t& state)
 {
     this->setDoorStates(state);
@@ -60,7 +62,6 @@ void System::setButtons(const std::shared_ptr<Switches> &btns)
 {
     this->buttons = btns;
 }
-
 
 void System::setWaitingForCommand(bool waiting)
 {
@@ -96,21 +97,28 @@ bool System::getWaitingForCommand() const
 
 
 /* MQTT INTERFACE */
-void System::connectToMQTTServer()
+void System::connectToWifi() const
 {
-    // [1]: Attempt to connect to a Wi-Fi.
-    if (this->mqttBroker->initWiFi())
-    {
-        /* [2]: Create a new mqtt client instance, initiate callback functions for connection,
-        subscribe & publish */
-        if (this->mqttBroker->establishMQTTClient())
-        {
-            std::cout << "[MQTT-SYSTEM-STATUS] --> Successfully attempted connection to an MQTT broker." << std::endl;
-        }
+    this->mqttBroker->initWiFi();
+}
 
-        else
+void System::connectToMQTTServer() const
+{
+    if (!this->mqttBroker->getMqttStatus())
+    {
+        // [1]: Attempt to connect to a Wi-Fi.
+        if (this->mqttBroker->initWiFi())
         {
-            std::cout << "[MQTT-SYSTEM-STATUS] --> Failure in attempt to connect to an MQTT broker, check establishMQTTClient() -method" << std::endl;
+            /* [2]: Create a new mqtt client instance that is used through-out the use, initiate callback functions for connection,
+            subscribe & publish */
+            if (this->mqttBroker->establishMQTTClient())
+            {
+                std::cout << "[MQTT-SYSTEM-STATUS] --> Successfully attempted connection to an MQTT broker." << std::endl;
+            }
+            else
+            {
+                std::cout << "[MQTT-SYSTEM-STATUS] --> Failure in attempt to connect to an MQTT broker, check establishMQTTClient() -method" << std::endl;
+            }
         }
     }
 }

@@ -37,7 +37,8 @@ public:
 
     /* IO DEVICES */
     // MQTT
-    void connectToMQTTServer();
+    void connectToWifi() const;
+    void connectToMQTTServer() const;
     void subPub(
         const mqttSubState_t& transmissionType, 
         const std::string& topic,
