@@ -22,6 +22,14 @@ currentTopic(MQTT_TOPIC_RUN_INSTRUCTIONS)
     this->getBrokerIpOctets();
 }
 
+/*
+ * [ MQTT CONNECTION MANAGEMENT METHODS ]
+ * @initWifi() Wi-Fi initiation,
+ * @establishMQTTClient() MQTT client instance creation,
+ * @disconnectMQTTClient() Disconnecting a connected MQTT client from an active broker,
+ * @mqttConnectCb Callback for client-broker connection changes,
+ * handled asynchronously by a background thread.
+ */
 bool MQTTManager::initWiFi()
 {
     if (!this->hardwareEnabled)
@@ -97,86 +105,6 @@ bool MQTTManager::disconnectMQTTClient()
     return false;
 }
 
-
-/* UTILITY METHODS */
-
-bool MQTTManager::getMqttStatus() const
-{
-    return this->mqttEnabled;
-}
-
-std::optional<std::string> MQTTManager::getNextCommand()
-{
-    if (!this->nextCommandBuffer.empty())
-    {
-        std::string tempCommandBuffer = this->nextCommandBuffer;
-        return tempCommandBuffer;
-    }
-    return std::nullopt;
-}
-
-void MQTTManager::setTopic(const std::string& newTopic)
-{
-    if (!this->currentTopic.empty())
-    {
-        this->previousTopic = this->currentTopic;
-    }
-
-    this->currentTopic = newTopic;
-}
-
-void MQTTManager::mqttIncomingPublishCb(void *arg, const char *topic, u32_t tot_len)
-{
-   printf("[MQTT-DATA-CB] --> Incoming message with length of: %d, from topic: %s\n", tot_len, topic);
-}
-
-void MQTTManager::mqttIncomingDataCb(void *arg, const u8_t *data, u16_t len, u8_t flags)
-{
-    if (auto *self = static_cast<MQTTManager*>(arg); self)
-    {
-        self->nextCommandBuffer.clear();
-        self->nextCommandBuffer.append(reinterpret_cast<const char*>(data), len);
-
-        printf("[MQTT-DATA-CB] --> Data received: %s\n", self->nextCommandBuffer.c_str());
-
-        if (flags & MQTT_DATA_FLAG_LAST)
-        {
-            printf("[MQTT-DATA-CB] --> Full message payload received.\n");
-        }
-    }
-}
-
-
-
-void MQTTManager::mqttSubscribeCb(void* arg, err_t result)
-{
-    if (auto *self = static_cast<MQTTManager*>(arg); self)
-    {
-        if (result != ERR_OK)
-        {
-            printf("[MQTT-SUBSCRIBE-ERROR-CB] --> MQTT subscribe failed with result: %d\n", result);
-            return;
-        }
-
-        printf("[MQTT-SUBSCRIBE-CB] --> MQTT subscribe successful.\n");
-    }
-}
-
-void MQTTManager::mqttPublishCb(void* arg, err_t result)
-{
-    if (auto *self = static_cast<MQTTManager*>(arg); self)
-    {
-        if (result != ERR_OK)
-        {
-            printf("[MQTT-PUBLISH-ERROR-CB] --> MQTT publish failed with status: %d\n", result);
-            return;
-        }
-
-        printf("[MQTT-PUBLISH-CB] --> MQTT publish successful.\n");
-    }
-}
-
-/* MQTT CONNECTION SETUP */
 void MQTTManager::mqttConnectCb(mqtt_client_t* client, void *arg, mqtt_connection_status_t status)
 {
     if (status != MQTT_CONNECT_ACCEPTED && status != MQTT_CONNECT_TIMEOUT && status != MQTT_CONNECT_DISCONNECTED)
@@ -210,7 +138,117 @@ void MQTTManager::mqttConnectCb(mqtt_client_t* client, void *arg, mqtt_connectio
     }
 }
 
-// MQTT SUBSCRIBE FUNCTION
+
+/*
+ * [ GETTERS ]
+ * @getMqttStatus() Returns the current Mqtt connection status (client to broker)
+ * @getNextCommand() Returns the most recent commands for the system
+ */
+bool MQTTManager::getMqttStatus() const
+{
+    return this->mqttEnabled;
+}
+
+std::optional<std::string> MQTTManager::getNextCommand() const
+{
+    if (!this->nextCommandBuffer.empty())
+    {
+        std::string tempCommandBuffer = this->nextCommandBuffer;
+        return tempCommandBuffer;
+    }
+    return std::nullopt;
+}
+
+
+/*
+ * [ SETTERS ]
+ * @setTopic() sets the instance's topic handling variable
+ * with a new topic given as a param.
+ */
+void MQTTManager::setTopic(const std::string& newTopic)
+{
+    if (!this->currentTopic.empty())
+    {
+        this->previousTopic = this->currentTopic;
+    }
+
+    this->currentTopic = newTopic;
+}
+
+
+/*
+ * [ DATA CALLBACKS ]
+ * @mqttIncomingPublishCb() Gives initial information of an incoming
+ * publish from a subscribed topic
+ *
+ * @mqttIncomingDataCb() Handler for the incoming publish, data is appended to a variable
+ * of type string
+ */
+void MQTTManager::mqttIncomingPublishCb(void *arg, const char *topic, u32_t tot_len)
+{
+   printf("[MQTT-DATA-CB] --> Incoming message with length of: %d, from topic: %s\n", tot_len, topic);
+}
+
+void MQTTManager::mqttIncomingDataCb(void *arg, const u8_t *data, u16_t len, u8_t flags)
+{
+    if (auto *self = static_cast<MQTTManager*>(arg); self)
+    {
+        self->nextCommandBuffer.clear();
+        self->nextCommandBuffer.append(reinterpret_cast<const char*>(data), len);
+
+        printf("[MQTT-DATA-CB] --> Data received: %s\n", self->nextCommandBuffer.c_str());
+
+        if (flags & MQTT_DATA_FLAG_LAST)
+        {
+            printf("[MQTT-DATA-CB] --> Full message payload received.\n");
+        }
+    }
+}
+
+
+/* [ SUBSCRIBE CALLBACK ]
+ * @mqttSubscribeCb() Reports whether a subscribe transmission
+ * to a target topic was successful or not.
+ */
+void MQTTManager::mqttSubscribeCb(void* arg, err_t result)
+{
+    if (auto *self = static_cast<MQTTManager*>(arg); self)
+    {
+        if (result != ERR_OK)
+        {
+            printf("[MQTT-SUBSCRIBE-ERROR-CB] --> MQTT subscribe failed with result: %d\n", result);
+            return;
+        }
+
+        printf("[MQTT-SUBSCRIBE-CB] --> MQTT subscribe successful.\n");
+    }
+}
+
+/* [ PUBLISH CALLBACK ]
+ * @mqttPublishCb() Reports whether a publish transmission
+ * to a target topic was successful or not.
+ */
+void MQTTManager::mqttPublishCb(void* arg, err_t result)
+{
+    if (auto *self = static_cast<MQTTManager*>(arg); self)
+    {
+        if (result != ERR_OK)
+        {
+            printf("[MQTT-PUBLISH-ERROR-CB] --> MQTT publish failed with status: %d\n", result);
+            return;
+        }
+
+        printf("[MQTT-PUBLISH-CB] --> MQTT publish successful.\n");
+    }
+}
+
+
+/*
+ * [ SUBSCRIBE METHOD ]
+ * @subscribeToTopic() Handles subscribing to a topic.
+ * Main functionality is wrapped inside a special cyw43 defined mutex for thread-safety
+ * and effectiveness without need of polling TCP/IP packets manually.
+ */
 bool MQTTManager::subscribeToTopic(const mqttSubState_t &subsState)
 {
     cyw43_arch_lwip_begin();
@@ -232,7 +270,11 @@ bool MQTTManager::subscribeToTopic(const mqttSubState_t &subsState)
     return true;
 }
 
-// MQTT PUBLISH FUNCTION
+/* [ PUBLISH METHOD ]
+ * @publishToTopic() Handles publishing to a topic and
+ * takes a parameter msg of type string as a transmittable payload.
+ * Special mutex also used.
+ */
 bool MQTTManager::publishToTopic(const std::string &msg)
 {
     cyw43_arch_lwip_begin();
