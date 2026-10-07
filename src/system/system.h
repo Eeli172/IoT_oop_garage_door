@@ -27,6 +27,7 @@ public:
     void setDoorStates(const doorState_t& state);
     void setDoorStatesAndSave(const doorState_t& state);
     void setWaitingForCommand(bool waiting);
+    void setRecoverFromPowerOff(bool recoverState);
 
     /* SYSTEM GETTERS */
     [[nodiscard]] calibrationState_t getCalibState() const;
@@ -34,6 +35,7 @@ public:
     [[nodiscard]] doorState_t getPreviousDoorState() const;
     [[nodiscard]] doorState_t getCurrentDoorState() const;
     [[nodiscard]] bool getWaitingForCommand() const;
+    bool getRecoverFromPowerOff() const;
 
     /* IO DEVICES */
     // MQTT
@@ -68,6 +70,7 @@ private:
     doorState_t currentDoorState;
     doorState_t previousDoorState;
     bool waitingForCommand;
+    bool recoverFromPowerOff;
 
     /* SYSTEM IO DEVICES */
     std::unique_ptr<MQTTManager> mqttBroker;

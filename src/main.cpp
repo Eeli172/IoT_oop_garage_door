@@ -42,10 +42,25 @@ int main()
     sys->setMotor(stepperMotor);
     sys->setButtons(userButtons);
     sys->createStatusLeds();
-    sys->loadSystem();
     sys->connectToWifi();
+    sys->loadSystem();
+
+    /* EEPROM TEST PRINTS
+    sleep_ms(50);
+    printf("\ncalib: %d\n",sys->getCalibState());
+    sleep_ms(50);
+    printf("doorS: %d\n", sys->getCurrentDoorState());
+    sleep_ms(50);
+    printf("recover: %d\n", sys->getRecoverFromPowerOff());
+    sleep_ms(50);
+    printf("dir: %d\n",stepperMotor->getDirection());
+    sleep_ms(50);
+    printf("steps: %f\n\n",stepperMotor->getMtrStpsPerEncder());
+    sleep_ms(50);
+    */
 
     bool queueDummy;
+    bool manualStop = false;
     absolute_time_t wifiTimeout = 0;
 
     while (true)
@@ -107,21 +122,20 @@ int main()
                 
             case IN_BETWEEN:
 
-
-                if (stepperMotor->getStoppedManually()) // STOPPED BY SW1 (or mqtt command?)
+                if (manualStop || sys->getRecoverFromPowerOff()) // ( STOPPED BY SW1 || MQTT )  ||  ( recovering from shutdown in IN_BETWEEN -state )
                 {
                     if (!queue_try_remove(&sw1EventQ, &queueDummy) && !sys->validateDriveCommand("REVERSE")) {
                         break;
                     }
+                    sys->setRecoverFromPowerOff(false);
                 }
 
-                stepperMotor->runMotor(*encoder, [&sys](const std::string& cmd)
+
+                manualStop = stepperMotor->runMotor(*encoder, [&sys](const std::string& cmd)
                 {
                     return sys->validateDriveCommand(cmd);
                 });
-
                 sys->saveSystem(EEPROM_ADDR_DIRECTION);
-                sys->saveSystem(EEPROM_ADDR_MANUALSTOP);
 
 
                 if (stepperMotor->getErrorState()) // ERROR --> CALIBRATION NEEDED
@@ -131,7 +145,8 @@ int main()
                     sys->setCalibStateAndSave(NOT_CALIBRATED);
                     sys->disconnectFromMQTTServer();
                 }
-                else if (!stepperMotor->getStoppedManually()) // Motor reached a limit switch { OPEN, CLOSED }
+
+                else if (!manualStop) // Motor reached a limit switch { OPEN, CLOSED }
                 {
                     if (sys->getPreviousDoorState() == CLOSED && !stepperMotor->getDirection())
                     {

@@ -16,6 +16,7 @@ calibState(NOT_CALIBRATED),
 currentDoorState(CLOSED),
 previousDoorState(CLOSED),
 waitingForCommand(false),
+recoverFromPowerOff(false),
 mqttBroker(std::make_unique<MQTTManager>()),
 eeprom(std::make_unique<Eeprom>())
 {}
@@ -68,6 +69,12 @@ void System::setWaitingForCommand(bool waiting)
     waitingForCommand = waiting;
 }
 
+void System::setRecoverFromPowerOff(bool recoverState) 
+{
+    this->recoverFromPowerOff = recoverState;
+}
+
+
 
 // GETTER FUNCTIONS
 calibrationState_t System::getCalibState() const
@@ -93,6 +100,11 @@ doorState_t System::getPreviousDoorState() const
 bool System::getWaitingForCommand() const
 {
     return waitingForCommand;
+}
+
+bool System::getRecoverFromPowerOff() const 
+{
+    return this->recoverFromPowerOff;
 }
 
 
@@ -202,10 +214,6 @@ void System::saveSystem(uint16_t addr) {
             value = this->eeprom->write_byte(addr, this->motor->getDirection());
             break;
 
-        case EEPROM_ADDR_MANUALSTOP:
-            value = this->eeprom->write_byte(addr, this->motor->getStoppedManually());
-            break;
-
         case EEPROM_ADDR_STEPS_PER_ENCODER:
             value = this->eeprom->write_float(addr, this->motor->getMtrStpsPerEncder());
             break;
@@ -248,14 +256,6 @@ void System::loadSystem() {
         return;
     }
 
-    
-    auto manualStop = this->eeprom->read_byte(EEPROM_ADDR_MANUALSTOP); // MANUAL_STOP
-
-    if (!manualStop.has_value()) {
-        std::cout << "[SYS-LOAD] --> MANUAL_STOP: previous value not found" << std::endl;
-        return;
-    }
-
 
     auto stepsPerEncoder = this->eeprom->read_float(EEPROM_ADDR_STEPS_PER_ENCODER); // STEPS_PER_ENCODER
 
@@ -272,13 +272,14 @@ void System::loadSystem() {
     this->setDoorStates((doorState_t) doorState.value());
     this->motor->setMtrStpsPerEncder(stepsPerEncoder.value());
     this->motor->setDirection((bool) direction.value());
-    this->motor->setStoppedManually(manualStop.value());
 
     if (calibState.value() == CALIBRATED) {
         this->buttons->setInterrupt(std::vector{PIN_SW1}, true);
         this->enableStatusLeds(true);
+        if (doorState.value() == IN_BETWEEN) {
+            this->recoverFromPowerOff = true;
+        }
     }
-
 }
 
 

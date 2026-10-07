@@ -110,7 +110,6 @@ std::optional<std::string> MQTTManager::getNextCommand()
     if (!this->nextCommandBuffer.empty())
     {
         std::string tempCommandBuffer = this->nextCommandBuffer;
-        this->nextCommandBuffer.clear();
         return tempCommandBuffer;
     }
     return std::nullopt;
@@ -135,6 +134,7 @@ void MQTTManager::mqttIncomingDataCb(void *arg, const u8_t *data, u16_t len, u8_
 {
     if (auto *self = static_cast<MQTTManager*>(arg); self)
     {
+        self->nextCommandBuffer.clear();
         self->nextCommandBuffer.append(reinterpret_cast<const char*>(data), len);
 
         printf("[MQTT-DATA-CB] --> Data received: %s\n", self->nextCommandBuffer.c_str());
