@@ -45,7 +45,7 @@ int main()
 
     bool queueDummy;
     bool manualStop = false;
-    absolute_time_t wifiTimeout = 0;
+    absolute_time_t wifiTimeout = get_absolute_time();
 
     while (true)
     {
