@@ -160,12 +160,14 @@ void System::connectToMQTTServer() const
  */
 void System::disconnectFromMQTTServer() const
 {
-    if (this->mqttBroker->disconnectMQTTClient())
+    if (this->mqttBroker->getMqttStatus())
     {
-        std::cout << "[MQTT-SYSTEM-STATUS] --> MQTT disconnected successfully from the broker." << std::endl;
-        return;
+        if (this->mqttBroker->disconnectMQTTClient())
+        {
+            std::cout << "[MQTT-SYSTEM-STATUS] --> MQTT disconnected successfully from the broker." << std::endl;
+            return;
+        }
     }
-
     std::cout << "[MQTT-SYSTEM-STATUS] --> MQTT disconnection attempt failed, were you even connected to an active broker?" << std::endl;
 }
 
