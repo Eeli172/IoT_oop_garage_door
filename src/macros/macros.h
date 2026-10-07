@@ -18,25 +18,25 @@
 #define MQTT_BROKER_PORT 1883
 #define MQTT_CLIENT_ID "rp2040_gd"
 #define MQTT_CLIENT_KA_TIME 60
+#define MQTT_DEFAULT_MSG "<Initialization complete>"
 #define MQTT_TOPIC_RUN_INSTRUCTIONS "garage/door/run_instructions"
 #define MQTT_TOPIC_INSTRUCTION_RESPONSE "garage/door/response"
 #define MQTT_TOPIC_DOOR_STATE "garage/door/door_status"
 #define MQTT_TOPIC_SYSTEM_STATE "garage/door/system_state"
 #define MQTT_TOPIC_ERROR_STATE "garage/door/error_state"
-#define MQTT_DEFAULT_MSG "<Initialization complete>"
 
 // EEPROM
-#define EEPROM_ADDR_CALIBRATION_STATE 0x0000 // 0 - 1
-#define EEPROM_ADDR_DOOR_STATE 0x0002 // 2 - 3
+#define EEPROM_ADDR_CALIBRATION_STATE 0x0000 // 0 - 1 (1 byte + inverted)
+#define EEPROM_ADDR_DOOR_STATE 0x0002 // 2 - 3 (1 byte + inverted)
 #define EEPROM_ADDR_STEPS_PER_ENCODER 0x0004 // 4 - 11 (4 bytes + inverted)
-#define EEPROM_ADDR_DIRECTION 0x000C // 12-13
-#define EEPROM_ADDR_MANUALSTOP 0x000E // 14-15
+#define EEPROM_ADDR_DIRECTION 0x000C // 12 - 13 (1 byte + inverted)
+#define EEPROM_ADDR_MANUALSTOP 0x000E // 14 - 15 (1 byte + inverted)
 
 #define EEPROM_ADDR_BYTES 2 
-#define EEPROM_PAYLOAD_SIZE_BYTE (EEPROM_ADDR_BYTES + (BYTE * 2)) // (addr + (data + ~data))
-#define EEPROM_PAYLOAD_SIZE_FLOAT (EEPROM_ADDR_BYTES + (FLOAT_BYTES * 2)) // (addr + (data + ~data))
 #define EEPROM_BUFFER_SIZE_BYTE (BYTE * 2) // (data + ~data)
 #define EEPROM_BUFFER_SIZE_FLOAT (FLOAT_BYTES * 2) // (data + ~data)
+#define EEPROM_PAYLOAD_SIZE_BYTE (EEPROM_ADDR_BYTES + EEPROM_BUFFER_SIZE_BYTE) // (addr + (data + ~data))
+#define EEPROM_PAYLOAD_SIZE_FLOAT (EEPROM_ADDR_BYTES + EEPROM_BUFFER_SIZE_FLOAT) // (addr + (data + ~data))
 
 // I2C
 #define I2C_ADDR_EEPROM 0x50
@@ -48,6 +48,8 @@
 #define BYTE 1
 #define BYTE_BITS 8
 #define FLOAT_BYTES sizeof(float)
+
+
 
 /* GPIOS */
 // BUTTONS

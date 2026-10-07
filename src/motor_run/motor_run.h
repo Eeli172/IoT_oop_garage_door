@@ -19,46 +19,65 @@ public:
     Motor(const Motor&) = delete;
     Motor &operator=(const Motor&) = delete;
 
-    void runMotorSteps();
+    /* 
+    Run motor until stopped by:
+        1. sw1 
+        2. limit switches
+        3. stuck detection
+        4. mqtt command
+    Return: true (stopped manually (sw1 || mqtt command))  ||  false (otherwise)
+    */
     bool runMotor(Encoder& encoder, const std::optional<std::function<bool(const std::string &)>>& MqttStop);
-    void stopMotor();
 
-    void reverseDirection();
-
-    bool getDirection() const;
-    void setDirection(bool direction);
-
-    float getMtrStpsPerEncder() const;
-    void setMtrStpsPerEncder(float steps);
-
+    /*
+    Calibrate motor, door is left closed after calibration.
+    */
     void calibrateMotor(Encoder& encoder);
-    void setCalibState(const bool& calibState);
 
-    void clearErrorState();
+    // SETTERS
+    void setMtrStpsPerEncder(float steps);
+    void setDirection(bool direction);
+    void setCalibState(const bool& calibState);
+    
+    // GETTERS
+    float getMtrStpsPerEncder() const;
+    bool getDirection() const;
     bool getErrorState() const;
 
+
+
 private:
+    // CLASS POINTERS
     std::vector<std::unique_ptr<CommonGPIO>> motorCoils;
     std::unique_ptr<Switches> limitSwitches;
 
-    static int InstructionsMatrix[8][4];    
+    // ATTRIBUTES
+    static int InstructionsMatrix[8][4];
     int step;
     int motorStepCounter;
     bool direction; // true == moving towards the encoder
-    bool errorState;
+    bool errorState; // true == door stuck
     bool calibrated;
     int stepsSinceEncoder;
-
-
     MovementCalibration_t movementCalibration;
 
 
+    // turn off the output of the motor coils
+    void stopMotor();
+
+    // direction = !direction
+    void reverseDirection();
+
+    bool stuckDetectionEnabled() const;
+    
     float calculateMotorStepsPerEncoder(
         int motorSteps,
         int encoderSteps) const;
 
-    bool stuckDetectionEnabled() const;
+    void runMotorSteps();
+    
     void checkForStuck();
+
 };
 
 #endif // IOT_OOP_GARAGE_DOOR_MOTOR_RUN_H

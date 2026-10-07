@@ -11,7 +11,7 @@ extern queue_t encEventQ;
 
 /* EVENT FUNCTIONS / CLASSES */
 void commonIsr(uint gpio, uint32_t eventMask);
-void initQueues();
+void initInterruptQueues();
 
 
 #endif //IOT_OOP_GARAGE_DOOR_INTERRUPTS_H

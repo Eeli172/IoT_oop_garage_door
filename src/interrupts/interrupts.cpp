@@ -18,9 +18,9 @@ void commonIsr(const uint gpio, const uint32_t eventMask)
         queue_try_add(&encEventQ, &value);
         return;
     }
-    else // UPDATE TIMER ON BOTH EDGES
+    else // UPDATE TIMER ON BOTH EDGES (to ignore bounce caused by releasing the switch)
     {
-        // if (switch pressed) || (switch pressed but debounce were too fast with the next edge)
+        // if (sw1 / limitSwitch was pressed) || (limitSwitch pressed but debounce were too fast with the next edge)
         if ( (eventMask == GPIO_IRQ_EDGE_FALL) || (eventMask == GPIO_IRQ_EDGE_FALL + GPIO_IRQ_EDGE_RISE && gpio != PIN_SW1) )
         {
             // Check debounce for this specific pin
@@ -47,7 +47,7 @@ void commonIsr(const uint gpio, const uint32_t eventMask)
     }
 }
 
-void initQueues()
+void initInterruptQueues()
 {
     queue_init(&sw1EventQ, sizeof(bool), 10);
     queue_init(&lmswMtrEventQ, sizeof(bool), 10);

@@ -24,6 +24,7 @@ int main()
     sleep_ms(500);
     std::cout << "\n BOOT\n" << std::endl;
 
+
     const auto sys = std::make_shared<System>();
     const auto stepperMotor = std::make_shared<Motor>(
         std::vector{PIN_COIL_1, PIN_COIL_2, PIN_COIL_3, PIN_COIL_4}, false
@@ -35,7 +36,7 @@ int main()
         PIN_ENCODER_A, PIN_ENCODER_B, false
     );
 
-    initQueues();
+    initInterruptQueues();
 
     encoder->enableInterrupts();
 
@@ -45,19 +46,6 @@ int main()
     sys->connectToWifi();
     sys->loadSystem();
 
-    /* EEPROM TEST PRINTS
-    sleep_ms(50);
-    printf("\ncalib: %d\n",sys->getCalibState());
-    sleep_ms(50);
-    printf("doorS: %d\n", sys->getCurrentDoorState());
-    sleep_ms(50);
-    printf("recover: %d\n", sys->getRecoverFromPowerOff());
-    sleep_ms(50);
-    printf("dir: %d\n",stepperMotor->getDirection());
-    sleep_ms(50);
-    printf("steps: %f\n\n",stepperMotor->getMtrStpsPerEncder());
-    sleep_ms(50);
-    */
 
     bool queueDummy;
     bool manualStop = false;
@@ -86,20 +74,25 @@ int main()
 
         case CALIBRATING:
 
-            std::cout << "Calibration: started" << std::endl;
+            // disable leds
             sys->enableStatusLeds(false);
+
+            std::cout << "Calibration: started" << std::endl;
             stepperMotor->calibrateMotor(*encoder);
+            std::cout << "Calibration: finished" << std::endl;
+
+            // set & save parameters
             sys->saveSystem(EEPROM_ADDR_STEPS_PER_ENCODER);
             sys->saveSystem(EEPROM_ADDR_DIRECTION);
             sys->setDoorStatesAndSave(CLOSED); 
-            std::cout << "Calibration: finished" << std::endl;
             
             sys->enableStatusLeds(true);
             userButtons->setInterrupt(std::vector{PIN_SW1}, true);
-            sys->setCalibStateAndSave(CALIBRATED);
             sys->connectToMQTTServer();
-            sys->subPub(PUBLISH, MQTT_TOPIC_SYSTEM_STATE, "CALIBRATED");
             wifiTimeout = get_absolute_time();
+            
+            sys->subPub(PUBLISH, MQTT_TOPIC_SYSTEM_STATE, "CALIBRATED");
+            sys->setCalibStateAndSave(CALIBRATED);
             break;
 
 
@@ -122,7 +115,8 @@ int main()
                 
             case IN_BETWEEN:
 
-                if (manualStop || sys->getRecoverFromPowerOff()) // ( STOPPED BY SW1 || MQTT )  ||  ( recovering from shutdown in IN_BETWEEN -state )
+                // ( STOPPED BY SW1 || MQTT )  ||  ( recovering from shutdown in IN_BETWEEN -state )
+                if (manualStop || sys->getRecoverFromPowerOff()) 
                 {
                     if (!queue_try_remove(&sw1EventQ, &queueDummy) && !sys->validateDriveCommand("REVERSE")) {
                         break;
@@ -131,6 +125,7 @@ int main()
                 }
 
 
+                // RUN MOTOR
                 manualStop = stepperMotor->runMotor(*encoder, [&sys](const std::string& cmd)
                 {
                     return sys->validateDriveCommand(cmd);

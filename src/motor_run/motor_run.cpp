@@ -12,6 +12,9 @@
 #include "types/types.h"
 
 
+
+/* ########## P U B L I C ########## */
+
 Motor::Motor(
     const std::vector<int>& coilGpios,
     bool inverted) :
@@ -36,68 +39,15 @@ Motor::Motor(
     );
 }
 
-int Motor::InstructionsMatrix[8][4] =
-{
-    {1, 0, 0, 0},
-    {1, 1, 0, 0},
-    {0, 1, 0, 0},
-    {0, 1, 1, 0},
-    {0, 0, 1, 0},
-    {0, 0, 1, 1},
-    {0, 0, 0, 1},
-    {1, 0, 0, 1}
-};
 
-
-void Motor::runMotorSteps()
-{
-    // Apply current coil pattern
-    for (uint i = 0; i < MTR_COILS; ++i)
-    {
-        gpio_put(
-            motorCoils[i]->getPin(),
-            InstructionsMatrix[step][i]);
-    }
-
-    // Move to next step
-    if (direction)
-    {
-        step = step > 0 ? step - 1 : MTR_STEPS - 1;
-    }
-    else
-    {
-        step = step < MTR_STEPS - 1 ? step + 1 : 0;
-    }
-}
-
-
-void Motor::reverseDirection()
-{
-    direction = !direction;
-}
-
-
-bool Motor::getDirection() const
-{
-    return direction;
-}
-
-void Motor::setDirection(bool direction)
-{
-    this->direction = direction;
-}
-
-float Motor::getMtrStpsPerEncder() const
-{
-    return this->movementCalibration.motorStepsPerEncoder;
-}
-
-void Motor::setMtrStpsPerEncder(float steps)
-{
-    this->movementCalibration.motorStepsPerEncoder = steps;
-}
-
-
+/* 
+Run motor until stopped by:
+    1. sw1 
+    2. limit switches
+    3. stuck detection
+    4. mqtt command
+Return: true (stopped manually (sw1 || mqtt command))  ||  false (otherwise)
+*/
 bool Motor::runMotor(Encoder& encoder, const std::optional<std::function<bool(const std::string &)>> &MqttStop)
 {
     bool lmswMtrStop = false;
@@ -170,14 +120,9 @@ bool Motor::runMotor(Encoder& encoder, const std::optional<std::function<bool(co
 }
 
 
-void Motor::stopMotor()
-{
-    for (const auto& coil : motorCoils)
-    {
-        coil->write(false);
-    }
-}
-
+/*
+Calibrate motor, door is left closed after calibration.
+*/
 void Motor::calibrateMotor(Encoder& encoder)
 {
     this->direction = false;
@@ -241,27 +186,110 @@ void Motor::calibrateMotor(Encoder& encoder)
     if (gpio_get(PIN_LMSW_MTR_OPEN)) runMotor(encoder, std::nullopt);
 }
 
+
+
+
+// SETTERS
+void Motor::setMtrStpsPerEncder(float steps)
+{
+    this->movementCalibration.motorStepsPerEncoder = steps;
+}
+void Motor::setDirection(bool direction)
+{
+    this->direction = direction;
+}
 void Motor::setCalibState(const bool& calibState)
 {
     this->calibrated = calibState;
 }
 
 
-float Motor::calculateMotorStepsPerEncoder(
-    int motorSteps,
-    int encoderSteps) const
-{
-    if (encoderSteps <= 0)
-    {
-        return 0.0f;
-    }
 
-    return static_cast<float>(motorSteps) / encoderSteps;
+
+// GETTERS
+float Motor::getMtrStpsPerEncder() const
+{
+    return this->movementCalibration.motorStepsPerEncoder;
+}
+bool Motor::getDirection() const
+{
+    return direction;
+}
+bool Motor::getErrorState() const
+{
+    return errorState;
+}
+
+
+
+
+/* ########## P R I V A T E ########## */
+
+
+// onko tarkoituksella constructorin ulkona? @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+int Motor::InstructionsMatrix[8][4] =
+{
+    {1, 0, 0, 0},
+    {1, 1, 0, 0},
+    {0, 1, 0, 0},
+    {0, 1, 1, 0},
+    {0, 0, 1, 0},
+    {0, 0, 1, 1},
+    {0, 0, 0, 1},
+    {1, 0, 0, 1}
+};
+
+
+// turn off the output of the motor coils
+void Motor::stopMotor()
+{
+    for (const auto& coil : motorCoils)
+    {
+        coil->write(false);
+    }
+}
+
+void Motor::reverseDirection()
+{
+    direction = !direction;
 }
 
 bool Motor::stuckDetectionEnabled() const
 {
     return calibrated && movementCalibration.motorStepsPerEncoder > 0.0f;
+}
+
+float Motor::calculateMotorStepsPerEncoder(
+    int motorSteps,
+    int encoderSteps) const
+    {
+        if (encoderSteps <= 0)
+        {
+            return 0.0f;
+        }
+        
+        return static_cast<float>(motorSteps) / encoderSteps;
+}
+
+void Motor::runMotorSteps()
+{
+    // Apply current coil pattern
+    for (uint i = 0; i < MTR_COILS; ++i)
+    {
+        gpio_put(
+            motorCoils[i]->getPin(),
+            InstructionsMatrix[step][i]);
+    }
+
+    // Move to next step
+    if (direction)
+    {
+        step = step > 0 ? step - 1 : MTR_STEPS - 1;
+    }
+    else
+    {
+        step = step < MTR_STEPS - 1 ? step + 1 : 0;
+    }
 }
 
 void Motor::checkForStuck()
@@ -280,18 +308,4 @@ void Motor::checkForStuck()
 
         errorState = true;
     }
-}
-
-//used in main and sets steps to 0
-void Motor::clearErrorState()
-{
-    errorState = false;
-    stepsSinceEncoder = 0;
-}
-
-
-// Errors and led
-bool Motor::getErrorState() const
-{
-    return errorState;
 }

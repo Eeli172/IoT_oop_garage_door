@@ -10,24 +10,52 @@
 
 class System;
 
-// LED HUB (GPIO: 20, 21, 22)
 class StatusLeds {
 public:
     StatusLeds(const std::vector<int> &ledGpios, const std::weak_ptr<System> &sys);
     StatusLeds(const StatusLeds &) = delete;
     ~StatusLeds() = default;
 
+    /*
+    Update led states according to:
+        1. System.currentDoorState
+        2. System.doorErrorState
+    Needs to be called constantly
+    */ 
     void updateCall();
-    void getStates();
-    void updateLeds();
-    void toggleValue();
+
+    /*
+    Give the updateCall permission to turn the leds on
+    */
     void setEnabled(const bool& enbld);
-    void turnOff();
     
 private:
+    /*
+    Turn all the leds off
+    */
+    void turnOff();
+    
+    /*
+    Toggle this->ledValue with a timeout
+    */
+    void toggleValue();
+
+    /*
+    Fetch door and error states from System class
+    */
+    void getStates();
+
+    /*
+    Turn leds off EXCEPT for the led corresponding to this->doorState, 
+        which is turned into this->ledValue -state 
+    */ 
+    void updateLeds();
+
+    // OTHER CLASSES
     std::vector<std::unique_ptr<CommonGPIO>> ledGpios;
     std::weak_ptr<System> system;
 
+    // ATTRIBUTES
     doorState_t doorState;
     bool errorState;
     bool ledValue;

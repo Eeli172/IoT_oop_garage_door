@@ -15,10 +15,8 @@ Eeprom::Eeprom() {
 }
 
 /*
-Write 2 bytes: original and inverted
-Return:
-    succeed --> true
-    fail --> false
+Write 2 bytes: 1 byte original and inverted
+Return:  true (succeed)  ||  false (failed)
 */
 bool Eeprom::write_byte(uint16_t memory_address, uint8_t data) {
     std::array<uint8_t, EEPROM_PAYLOAD_SIZE_BYTE> payload = {
@@ -38,7 +36,7 @@ bool Eeprom::write_byte(uint16_t memory_address, uint8_t data) {
 
 /*
 Read 2 bytes: value & ~value @ memory_address and validate. 
-Return __validated value__ || in case of failure __std::nullopt__
+Return:  validated_value (succeed)  ||  std::nullopt (failure)
 */
 std::optional<uint8_t> Eeprom::read_byte(uint16_t memory_address) const {
     std::array<uint8_t, EEPROM_BUFFER_SIZE_BYTE> buffer{};
@@ -60,9 +58,7 @@ std::optional<uint8_t> Eeprom::read_byte(uint16_t memory_address) const {
 
 /*
 Write 8 bytes: original 4-byte float and its inverted value
-Return:
-    succeed --> true
-    fail --> false
+Return:  true (succeed)  ||  false (failed)
 */
 bool Eeprom::write_float(uint16_t memory_address, float data) {
     std::array<uint8_t, EEPROM_PAYLOAD_SIZE_FLOAT> payload;
@@ -86,7 +82,7 @@ bool Eeprom::write_float(uint16_t memory_address, float data) {
 
 /*
 Read 8 bytes: value & ~value @ memory_address. 
-Return __validated value__ || in case of failure __std::nullopt__
+Return:  validated_value (succeed)  ||  std::nullopt (failure)
 */
 std::optional<float> Eeprom::read_float(uint16_t memory_address) const {
     std::array<uint8_t, EEPROM_BUFFER_SIZE_FLOAT> buffer{};
@@ -110,13 +106,13 @@ std::optional<float> Eeprom::read_float(uint16_t memory_address) const {
 }
 
 
+
 /* ############## P R I V A T E ############## */
+
 
 /*
 Write --payload-- into eeporm. 
-Return: 
-    succeed --> true
-    failed --> false
+Return: true (succeed)  ||  false (failed)
 */
 bool Eeprom::save_data(std::span<const uint8_t> payload) const {
     if (!poll_ack_with_timeout_ms(EEPROM_ACK_TIMEOUT_MS)) {
@@ -143,9 +139,7 @@ bool Eeprom::save_data(std::span<const uint8_t> payload) const {
 
 /*
 Read data from --memory_address-- into --destination-- 
-Return: 
-    succeed --> true
-    failed --> false
+Return: true (succeed)  ||  false (failed)
 */
 bool Eeprom::read_data(uint16_t memory_address, std::span<uint8_t> destination) const {
     if (!poll_ack_with_timeout_ms(EEPROM_ACK_TIMEOUT_MS)) {
@@ -181,25 +175,10 @@ bool Eeprom::read_data(uint16_t memory_address, std::span<uint8_t> destination) 
 }
 
 /*
-Initialize I2C hardware
-*/
-void Eeprom::init_i2c_hardware() {
-    i2c_init(I2C_PORT, I2C_FREQ);
-
-    gpio_set_function(PIN_I2C_SDA, GPIO_FUNC_I2C);
-    gpio_set_function(PIN_I2C_SCL, GPIO_FUNC_I2C);
-
-    gpio_pull_up(PIN_I2C_SDA);
-    gpio_pull_up(PIN_I2C_SCL);
-}
-
-/*
-Poll ack / block further code execution until:
-    we get an answer from eeprom == eeprom is free from previous write
+Poll ACK until:
+    answer from eeprom == eeprom is free from previous write
     --timeout_ms-- has passed
-Return:
-    ACK received --> true
-    timeout --> false
+Return:  true (ACK received)  ||  false (timeout)
 */
 bool Eeprom::poll_ack_with_timeout_ms(uint32_t timeout_ms) const {
     uint8_t dummy{0};
@@ -220,4 +199,17 @@ bool Eeprom::poll_ack_with_timeout_ms(uint32_t timeout_ms) const {
         }
     }
     return false;
+}
+
+/*
+Initialize I2C hardware
+*/
+void Eeprom::init_i2c_hardware() {
+    i2c_init(I2C_PORT, I2C_FREQ);
+
+    gpio_set_function(PIN_I2C_SDA, GPIO_FUNC_I2C);
+    gpio_set_function(PIN_I2C_SCL, GPIO_FUNC_I2C);
+
+    gpio_pull_up(PIN_I2C_SDA);
+    gpio_pull_up(PIN_I2C_SCL);
 }

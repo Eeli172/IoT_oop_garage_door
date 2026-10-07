@@ -28,16 +28,20 @@ public:
     void setDoorStatesAndSave(const doorState_t& state);
     void setWaitingForCommand(bool waiting);
     void setRecoverFromPowerOff(bool recoverState);
+    void setMotor(const std::shared_ptr<Motor>& mtr);
+    void setButtons(const std::shared_ptr<Switches>& btns);
 
     /* SYSTEM GETTERS */
     [[nodiscard]] calibrationState_t getCalibState() const;
-    [[nodiscard]] bool getDoorErrorState() const;
     [[nodiscard]] doorState_t getPreviousDoorState() const;
     [[nodiscard]] doorState_t getCurrentDoorState() const;
     [[nodiscard]] bool getWaitingForCommand() const;
-    bool getRecoverFromPowerOff() const;
+    [[nodiscard]] bool getRecoverFromPowerOff() const;
+    [[nodiscard]] bool getDoorErrorState() const;
+
 
     /* IO DEVICES */
+    
     // MQTT
     void connectToWifi() const;
     void connectToMQTTServer() const;
@@ -53,16 +57,12 @@ public:
     void saveSystem(uint16_t addr);
     void loadSystem();
 
-    // MOTOR
-    void setMotor(const std::shared_ptr<Motor>& mtr);
-
-    // BUTTONS
-    void setButtons(const std::shared_ptr<Switches>& btns);
-
     // STATUS LEDS
     void createStatusLeds();
     void updateStatusLeds() const;
     void enableStatusLeds(const bool& enbld);
+
+
 
 private:
     /* SYSTEM VARIABLES */

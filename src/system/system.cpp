@@ -11,6 +11,8 @@
 #include "types/types.h"
 
 
+/* ########## P U B L I C ########## */
+
 System::System() :
 calibState(NOT_CALIBRATED),
 currentDoorState(CLOSED),
@@ -22,7 +24,8 @@ eeprom(std::make_unique<Eeprom>())
 {}
 
 
-// SETTER FUNCTIONS
+/* SYSTEM SETTERS */
+
 void System::setCalibState(const calibrationState_t& state)
 {
     this->calibState = state;
@@ -54,16 +57,6 @@ void System::setDoorStatesAndSave(const doorState_t& state)
     this->saveSystem(EEPROM_ADDR_DOOR_STATE);
 }
 
-void System::setMotor(const std::shared_ptr<Motor> &mtr)
-{
-    this->motor = mtr;
-}
-
-void System::setButtons(const std::shared_ptr<Switches> &btns)
-{
-    this->buttons = btns;
-}
-
 void System::setWaitingForCommand(bool waiting)
 {
     waitingForCommand = waiting;
@@ -74,9 +67,19 @@ void System::setRecoverFromPowerOff(bool recoverState)
     this->recoverFromPowerOff = recoverState;
 }
 
+void System::setMotor(const std::shared_ptr<Motor> &mtr)
+{
+    this->motor = mtr;
+}
+
+void System::setButtons(const std::shared_ptr<Switches> &btns)
+{
+    this->buttons = btns;
+}
 
 
-// GETTER FUNCTIONS
+/* SYSTEM GETTERS */
+
 calibrationState_t System::getCalibState() const
 {
     return this->calibState;
@@ -108,7 +111,12 @@ bool System::getRecoverFromPowerOff() const
 }
 
 
+
+/* * * * * *  I O    D E V I C E S  * * * * * */
+
+
 /* MQTT INTERFACE */
+
 void System::connectToWifi() const
 {
     this->mqttBroker->initWiFi();
@@ -303,3 +311,6 @@ void System::updateStatusLeds() const
 void System::enableStatusLeds(const bool& enbld) {
     statusLeds->setEnabled(enbld);
 }
+
+
+/* ########## P R I V A T E ########## */
