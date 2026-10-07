@@ -13,6 +13,7 @@
 
 /* ########## P U B L I C ########## */
 
+/* SYSTEM INITIALIZATION */
 System::System() :
 calibState(NOT_CALIBRATED),
 currentDoorState(CLOSED),

@@ -12,7 +12,8 @@
 #define MOTOR_STEP_DELAY_US 1000
 
 // CALIBRATION
-#define STUCK_STEP_TOLERANCE 200 //safe minimum so it will not stop randomly 150
+// encoder ratio(usual 205-210) + tolerance should be smaller than two ratio for fastest/reliable stuck detection
+#define STUCK_STEP_TOLERANCE 200
 
 // MQTT
 #define MQTT_BROKER_PORT 1883

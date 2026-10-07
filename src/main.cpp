@@ -88,8 +88,11 @@ int main()
             
             sys->enableStatusLeds(true);
             userButtons->setInterrupt(std::vector{PIN_SW1}, true);
-            sys->connectToMQTTServer();
-            wifiTimeout = get_absolute_time();
+            //
+            // EI SIIS TOIMI ILMAN NETTIÄ
+            // *** PANIC ***
+           // sys->connectToMQTTServer();
+            //wifiTimeout = get_absolute_time();
             
             sys->subPub(PUBLISH, MQTT_TOPIC_SYSTEM_STATE, "CALIBRATED");
             sys->setCalibStateAndSave(CALIBRATED);
@@ -138,7 +141,7 @@ int main()
                     sys->subPub(PUBLISH, MQTT_TOPIC_ERROR_STATE, "STUCK WAS DETECTED");
                     userButtons->setInterrupt(std::vector{PIN_SW1}, false);
                     sys->setCalibStateAndSave(NOT_CALIBRATED);
-                    sys->disconnectFromMQTTServer();
+                   // sys->disconnectFromMQTTServer();
                 }
 
                 else if (!manualStop) // Motor reached a limit switch { OPEN, CLOSED }

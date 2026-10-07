@@ -1,15 +1,26 @@
 #ifndef GARAGE_DOOR_ENCODER_H
 #define GARAGE_DOOR_ENCODER_H
 
+/* STL */
 #include <memory>
+
+// /* SYSTEM */
 #include "pico/stdlib.h"
+
+/* CUSTOM */
 #include "../gpios.h"
+
+
+/* ENCODER STATE */
 
 enum class EncoderState
 {
     Clockwise,
     CounterClockwise
 };
+
+
+/* ENCODER MAIN CLASS */
 
 class Encoder
 {
@@ -20,23 +31,26 @@ public:
     Encoder(const Encoder&) = delete;
     Encoder& operator=(const Encoder&) = delete;
 
+
+    /* INTERRUPTS */
     void enableInterrupts() const;
     bool processInterrupts();
 
+
+    /* DIRECTION */
     EncoderState checkDirection() const;
 
+    /* POSITION */
     void updatePosition();
     void resetPosition();
 
-    int getPosition() const;
-
-    void setPosition(int position);
-
 
 private:
+    /* ENCODER GPIO PINS */
     std::unique_ptr<CommonGPIO> pinA;
     std::unique_ptr<CommonGPIO> pinB;
 
+    /* ENCODER STATE */
     int encoderPosition = 0;
 };
 

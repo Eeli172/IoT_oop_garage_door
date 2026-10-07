@@ -2,6 +2,11 @@
 #include "hardware/gpio.h"
 #include "interrupts/interrupts.h"
 
+
+/* ########## P U B L I C ########## */
+
+/* ENCODER INITIALIZATION */
+
 Encoder::Encoder(int pinA, int pinB, bool pullup)
 {
     this->pinA = std::make_unique<CommonGPIO>(
@@ -18,6 +23,9 @@ Encoder::Encoder(int pinA, int pinB, bool pullup)
         false
     );
 }
+
+
+/* ENCODER INTERRUPTS */
 
 void Encoder::enableInterrupts() const
 {
@@ -43,6 +51,9 @@ bool Encoder::processInterrupts()
     return eventReceived;
 }
 
+
+/* ENCODER DIRECTION */
+
 EncoderState Encoder::checkDirection() const
 {
     if (pinB->read() == 0)
@@ -53,6 +64,10 @@ EncoderState Encoder::checkDirection() const
     return EncoderState::CounterClockwise;
 }
 
+
+/* ENCODER POSITION */
+//uncomment prints to check the direction and position of the encoder could be used in mqtt
+
 void Encoder::updatePosition()
 {
     const EncoderState direction = checkDirection();
@@ -61,24 +76,17 @@ void Encoder::updatePosition()
     {
         ++encoderPosition;
 
-        /* std::cout
-            << "[ENCODER] Clockwise | position = "
-            << encoderPosition
-            << std::endl; */
-
+        /* std::cout << "[ENCODER] Clockwise | position = "
+                  << encoderPosition << std::endl; */
     }
     else
     {
         --encoderPosition;
-
-        /*std::cout
-            << "[ENCODER] Counter-clockwise | position = "
-            << encoderPosition
-            << std::endl; */
-
+        /* std::cout << "[ENCODER] Counter-clockwise | position = "
+         * << encoderPosition << std::endl; */
     }
 }
-
+//used in motor calibration
 void Encoder::resetPosition()
 {
     encoderPosition = 0;
@@ -86,12 +94,8 @@ void Encoder::resetPosition()
     /* std::cout << "[ENCODER] Position reset to 0" << std::endl; */
 }
 
+// used in motor calibration to calculate ratio= (motorsteps/encoder steps)
 int Encoder::getPosition() const
 {
     return encoderPosition;
-}
-
-void Encoder::setPosition(int position)
-{
-    encoderPosition = position;
 }

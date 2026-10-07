@@ -11,12 +11,14 @@ public:
     CommonGPIO(const CommonGPIO &) = delete;
     ~CommonGPIO();
 
+    /* GPIO CONTROL */
     void write(bool value) const;
     bool read() const;
     int getPin();
     explicit operator bool() const;
 
 private:
+    /* GPIO VARIABLES */
     static uint32_t pins_in_use;
     int pin;
     bool input;
@@ -25,7 +27,7 @@ private:
 
 
 
-// SWITCH HUB (SW0, SW1, SW2)
+/* SWITCH HUB (SW0, SW1, SW2) */
 class Switches {
 public:
     Switches(const std::vector<int> &pins, bool input, bool pullup, bool inverted);
