@@ -21,7 +21,7 @@ void commonIsr(const uint gpio, const uint32_t eventMask)
     else // UPDATE TIMER ON BOTH EDGES
     {
         // if (switch pressed) || (switch pressed but debounce were too fast with the next edge)
-        if ( (eventMask == GPIO_IRQ_EDGE_FALL) || (eventMask == GPIO_IRQ_EDGE_FALL + GPIO_IRQ_EDGE_RISE) )
+        if ( (eventMask == GPIO_IRQ_EDGE_FALL) || (eventMask == GPIO_IRQ_EDGE_FALL + GPIO_IRQ_EDGE_RISE && gpio != PIN_SW1) )
         {
             // Check debounce for this specific pin
             if (absolute_time_diff_us(debounceTimers[gpio], get_absolute_time()) > INTERRUPT_TIMEOUT_MS * 1000)

@@ -181,6 +181,8 @@ void Motor::stopMotor()
 void Motor::calibrateMotor(Encoder& encoder)
 {
     this->direction = false;
+    if (gpio_get(PIN_LMSW_MTR_OPEN)) this->direction = true;  
+    
     calibrated = false;
     errorState = false;
 

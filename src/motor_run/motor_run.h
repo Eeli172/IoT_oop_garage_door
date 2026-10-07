@@ -44,7 +44,7 @@ private:
     static int InstructionsMatrix[8][4];    
     int step;
     int motorStepCounter;
-    bool direction;
+    bool direction; // true == moving towards the encoder
     bool errorState;
     bool calibrated;
     int stepsSinceEncoder;

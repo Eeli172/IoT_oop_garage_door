@@ -148,12 +148,12 @@ int main()
 
                 else if (!manualStop) // Motor reached a limit switch { OPEN, CLOSED }
                 {
-                    if (sys->getPreviousDoorState() == CLOSED && !stepperMotor->getDirection())
+                    if (sys->getPreviousDoorState() == CLOSED && stepperMotor->getDirection())
                     {
                         sys->setDoorStatesAndSave(OPEN);
                         sys->subPub(PUBLISH, MQTT_TOPIC_DOOR_STATE, "OPEN");
                     }
-                    else if (sys->getPreviousDoorState() == OPEN && stepperMotor->getDirection())
+                    else if (sys->getPreviousDoorState() == OPEN && !stepperMotor->getDirection())
                     {
                         sys->setDoorStatesAndSave(CLOSED);
                         sys->subPub(PUBLISH, MQTT_TOPIC_DOOR_STATE, "CLOSED");

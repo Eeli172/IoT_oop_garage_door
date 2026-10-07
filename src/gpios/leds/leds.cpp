@@ -24,9 +24,8 @@ StatusLeds::StatusLeds(const std::vector<int> &ledGpios, const std::weak_ptr<Sys
     }
 }
 void StatusLeds::updateCall() {
-    if (this->enabled) {
+    if (this->enabled) {        
         this->getStates();
-        
         if (errorState) this->toggleValue();
         else ledValue = true;
         
