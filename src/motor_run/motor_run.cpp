@@ -20,6 +20,7 @@ Motor::Motor(
     direction(true),
     errorState(false),
     calibrated(false),
+    stoppedManually(false),
     movementCalibration{0.0f, false}
 {
     for (const auto& coilPin : coilGpios)
@@ -70,24 +71,6 @@ void Motor::runMotorSteps()
     }
 }
 
-bool Motor::reverseOnPressedLimitSwitch()
-{
-    // Closing while already at closing limit
-    if (direction && !gpio_get(PIN_LMSW_MTR_OPEN))
-    {
-        reverseDirection();
-        return true;
-    }
-
-    // Opening while already at opening limit
-    if (!direction && !gpio_get(PIN_LMSW_ENC_CLOSED))
-    {
-        reverseDirection();
-        return true;
-    }
-
-    return false;
-}
 
 void Motor::reverseDirection()
 {
@@ -120,25 +103,24 @@ bool Motor::runMotor(Encoder& encoder, const std::optional<std::function<bool(co
 {
     bool lmswMtrStop = false;
     bool lmswEncStop = false;
-    bool manualStop = false;
+    this->stoppedManually = false;
 
     motorStepCounter = 0;
     stepsSinceEncoder = 0;
     errorState = false;
 
-    reverseOnPressedLimitSwitch();
     limitSwitches->setInterrupt(std::vector{PIN_LMSW_MTR_OPEN, PIN_LMSW_ENC_CLOSED}, true);
 
     while (((direction && !lmswEncStop) ||
             (!direction && !lmswMtrStop))
-            && !manualStop
+            && !this->stoppedManually
             && !errorState)
     {
-        queue_try_remove(&sw1EventQ, &manualStop);
+        queue_try_remove(&sw1EventQ, &this->stoppedManually);
 
-        if (manualStop || (MqttStop.has_value() && MqttStop.value()("STOP")))
+        if (this->stoppedManually || (MqttStop.has_value() && MqttStop.value()("STOP")))
         {
-            manualStop = true;
+            this->stoppedManually = true;
             break;
         }
 
@@ -164,6 +146,9 @@ bool Motor::runMotor(Encoder& encoder, const std::optional<std::function<bool(co
     }
 
     limitSwitches->setInterrupt(std::vector{PIN_LMSW_MTR_OPEN, PIN_LMSW_ENC_CLOSED}, false);
+
+    this->reverseDirection();
+
     if (lmswEncStop)
     {
         encoder.resetPosition();
@@ -182,7 +167,7 @@ bool Motor::runMotor(Encoder& encoder, const std::optional<std::function<bool(co
         return false;
     }
 
-    return manualStop;
+    return this->stoppedManually;
 }
 
 
@@ -257,6 +242,14 @@ void Motor::calibrateMotor(Encoder& encoder)
 void Motor::setCalibState(const bool& calibState)
 {
     this->calibrated = calibState;
+}
+
+void Motor::setStoppedManually(bool stpdMnly) {
+    this->stoppedManually = stpdMnly;
+}
+
+bool Motor::getStoppedManually() {
+    return this->stoppedManually;
 }
 
 float Motor::calculateMotorStepsPerEncoder(

@@ -46,7 +46,6 @@ int main()
     sys->connectToWifi();
 
     bool queueDummy;
-    bool manualStop = false;
     absolute_time_t wifiTimeout = 0;
 
     while (true)
@@ -76,6 +75,7 @@ int main()
             sys->enableStatusLeds(false);
             stepperMotor->calibrateMotor(*encoder);
             sys->saveSystem(EEPROM_ADDR_STEPS_PER_ENCODER);
+            sys->saveSystem(EEPROM_ADDR_DIRECTION);
             sys->setDoorStatesAndSave(CLOSED); 
             std::cout << "Calibration: finished" << std::endl;
             
@@ -107,37 +107,31 @@ int main()
                 
             case IN_BETWEEN:
 
-                // after reboot this stops and akss for button before continuing
-                // without that it will automatically go to limitswitch
-                if (sys->getWaitingForCommand())
-                {
-                    manualStop = true;
-                    sys->setWaitingForCommand(false);
-                }
 
-                if (manualStop) // STOPPED BY SW1 (or mqtt command?)
+                if (stepperMotor->getStoppedManually()) // STOPPED BY SW1 (or mqtt command?)
                 {
                     if (!queue_try_remove(&sw1EventQ, &queueDummy) && !sys->validateDriveCommand("REVERSE")) {
                         break;
                     }
                 }
 
-                manualStop = stepperMotor->runMotor(*encoder, [&sys](const std::string& cmd)
+                stepperMotor->runMotor(*encoder, [&sys](const std::string& cmd)
                 {
                     return sys->validateDriveCommand(cmd);
                 });
 
+                sys->saveSystem(EEPROM_ADDR_DIRECTION);
+                sys->saveSystem(EEPROM_ADDR_MANUALSTOP);
+
+
                 if (stepperMotor->getErrorState()) // ERROR --> CALIBRATION NEEDED
                 {
-                    userButtons->setInterrupt(std::vector{PIN_SW1}, false);
                     sys->subPub(PUBLISH, MQTT_TOPIC_ERROR_STATE, "STUCK WAS DETECTED");
-                    sys->disconnectFromMQTTServer();
+                    userButtons->setInterrupt(std::vector{PIN_SW1}, false);
                     sys->setCalibStateAndSave(NOT_CALIBRATED);
-                    manualStop = false;
-                    break;
+                    sys->disconnectFromMQTTServer();
                 }
-
-                if (!manualStop) // Motor reached a limit switch { OPEN, CLOSED }
+                else if (!stepperMotor->getStoppedManually()) // Motor reached a limit switch { OPEN, CLOSED }
                 {
                     if (sys->getPreviousDoorState() == CLOSED && !stepperMotor->getDirection())
                     {

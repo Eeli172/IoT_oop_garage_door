@@ -197,6 +197,14 @@ void System::saveSystem(uint16_t addr) {
         case EEPROM_ADDR_DOOR_STATE:
             value = this->eeprom->write_byte(addr, static_cast<uint8_t>(this->getCurrentDoorState()));
             break;
+            
+        case EEPROM_ADDR_DIRECTION:
+            value = this->eeprom->write_byte(addr, this->motor->getDirection());
+            break;
+
+        case EEPROM_ADDR_MANUALSTOP:
+            value = this->eeprom->write_byte(addr, this->motor->getStoppedManually());
+            break;
 
         case EEPROM_ADDR_STEPS_PER_ENCODER:
             value = this->eeprom->write_float(addr, this->motor->getMtrStpsPerEncder());
@@ -218,6 +226,11 @@ void System::loadSystem() {
         std::cout << "[SYS-LOAD] --> CALIB_STATE: previous value not found" << std::endl;
         return;
     }
+    
+    if (calibState.value() == CALIBRATING) {
+        std::cout << "[SYS-LOAD] --> CALIB_STATE: calibration needed" << std::endl;
+        return;
+    }
 
 
     auto doorState = this->eeprom->read_byte(EEPROM_ADDR_DOOR_STATE); // DOOR_STATE
@@ -226,9 +239,20 @@ void System::loadSystem() {
         std::cout << "[SYS-LOAD] --> DOOR_STATE: previous value not found" << std::endl;
         return;
     }
+    
 
-    if (doorState.value() != OPEN && doorState.value() != CLOSED) {
-        std::cout << "[SYS-LOAD] --> DOOR_STATE: calibration needed" << std::endl;
+    auto direction = this->eeprom->read_byte(EEPROM_ADDR_DIRECTION); // DIRECTION
+
+    if (!direction.has_value()) {
+        std::cout << "[SYS-LOAD] --> DOOR_STATE: previous value not found" << std::endl;
+        return;
+    }
+
+    
+    auto manualStop = this->eeprom->read_byte(EEPROM_ADDR_MANUALSTOP); // MANUAL_STOP
+
+    if (!manualStop.has_value()) {
+        std::cout << "[SYS-LOAD] --> MANUAL_STOP: previous value not found" << std::endl;
         return;
     }
 
@@ -245,9 +269,11 @@ void System::loadSystem() {
     }
 
     this->setCalibState((calibrationState_t) calibState.value());
-    this->motor->setMtrStpsPerEncder(stepsPerEncoder.value());
     this->setDoorStates((doorState_t) doorState.value());
-    if (doorState.value() == OPEN) this->motor->reverseDirection();
+    this->motor->setMtrStpsPerEncder(stepsPerEncoder.value());
+    this->motor->setDirection((bool) direction.value());
+    this->motor->setStoppedManually(manualStop.value());
+
     if (calibState.value() == CALIBRATED) {
         this->buttons->setInterrupt(std::vector{PIN_SW1}, true);
         this->enableStatusLeds(true);

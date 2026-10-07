@@ -24,7 +24,6 @@ public:
     void stopMotor();
 
     void reverseDirection();
-    bool reverseOnPressedLimitSwitch();
 
     bool getDirection() const;
     void setDirection(bool direction);
@@ -34,6 +33,9 @@ public:
 
     void calibrateMotor(Encoder& encoder);
     void setCalibState(const bool& calibState);
+
+    void setStoppedManually(bool stpdMnly);
+    bool getStoppedManually();
 
     void clearErrorState();
     bool getErrorState() const;
@@ -49,6 +51,7 @@ private:
     bool errorState;
     bool calibrated;
     int stepsSinceEncoder;
+    bool stoppedManually;
 
 
     MovementCalibration_t movementCalibration;
