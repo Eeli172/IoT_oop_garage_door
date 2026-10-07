@@ -88,12 +88,10 @@ int main()
             
             sys->enableStatusLeds(true);
             userButtons->setInterrupt(std::vector{PIN_SW1}, true);
-            //
-            // EI SIIS TOIMI ILMAN NETTIÄ
-            // *** PANIC ***
-           // sys->connectToMQTTServer();
-            //wifiTimeout = get_absolute_time();
-            
+
+            sys->connectToMQTTServer();
+            wifiTimeout = get_absolute_time();
+
             sys->subPub(PUBLISH, MQTT_TOPIC_SYSTEM_STATE, "CALIBRATED");
             sys->setCalibStateAndSave(CALIBRATED);
             break;
