@@ -43,7 +43,7 @@ public:
     /* POSITION */
     void updatePosition();
     void resetPosition();
-
+    int getPosition() const;
 
 private:
     /* ENCODER GPIO PINS */
