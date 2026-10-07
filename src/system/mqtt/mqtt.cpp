@@ -149,11 +149,12 @@ bool MQTTManager::getMqttStatus() const
     return this->mqttEnabled;
 }
 
-std::optional<std::string> MQTTManager::getNextCommand() const
+std::optional<std::string> MQTTManager::getNextCommand()
 {
     if (!this->nextCommandBuffer.empty())
     {
         std::string tempCommandBuffer = this->nextCommandBuffer;
+        this->nextCommandBuffer.clear();
         return tempCommandBuffer;
     }
     return std::nullopt;

@@ -27,7 +27,7 @@ class MQTTManager
 
     // UTILITY FUNCTIONS
     [[nodiscard]] bool getMqttStatus() const; // Determines the connection to the MQTT broker.
-    [[nodiscard]] std::optional<std::string> getNextCommand() const;
+    [[nodiscard]] std::optional<std::string> getNextCommand();
 
     // SUBSCRIBING TO TOPIC + CALLBACK FOR SUCCESSFUL SUBSCRIBE
     bool subscribeToTopic(const mqttSubState_t &subsState);
