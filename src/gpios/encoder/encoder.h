@@ -4,9 +4,6 @@
 /* STL */
 #include <memory>
 
-// /* SYSTEM */
-#include "pico/stdlib.h"
-
 /* CUSTOM */
 #include "../gpios.h"
 

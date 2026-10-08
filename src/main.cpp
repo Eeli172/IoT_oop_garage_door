@@ -1,12 +1,11 @@
-/* HEADERS */
-// STL
+/* STL */
 #include <hardware/gpio.h>
 #include <iostream>
 #include <ostream>
 #include <memory>
 #include <vector>
 
-// CUSTOM
+/* CUSTOM HEADERS */
 #include "system/system.h"
 #include "gpios/gpios.h"
 #include "interrupts/interrupts.h"
@@ -14,8 +13,6 @@
 #include "macros/macros.h"
 #include "pico/stdio.h"
 #include "gpios/encoder/encoder.h"
-
-/* SYSTEM */
 
 
 int main()
@@ -46,10 +43,9 @@ int main()
     sys->connectToWifi();
     sys->loadSystem();
 
-
     bool queueDummy;
     bool manualStop = false;
-    absolute_time_t wifiTimeout = 0;
+    absolute_time_t wifiTimeout = get_absolute_time();
 
     while (true)
     {
@@ -88,10 +84,9 @@ int main()
             
             sys->enableStatusLeds(true);
             userButtons->setInterrupt(std::vector{PIN_SW1}, true);
-
             sys->connectToMQTTServer();
             wifiTimeout = get_absolute_time();
-
+            
             sys->subPub(PUBLISH, MQTT_TOPIC_SYSTEM_STATE, "CALIBRATED");
             sys->setCalibStateAndSave(CALIBRATED);
             break;
@@ -139,7 +134,7 @@ int main()
                     sys->subPub(PUBLISH, MQTT_TOPIC_ERROR_STATE, "STUCK WAS DETECTED");
                     userButtons->setInterrupt(std::vector{PIN_SW1}, false);
                     sys->setCalibStateAndSave(NOT_CALIBRATED);
-                   // sys->disconnectFromMQTTServer();
+                    sys->disconnectFromMQTTServer();
                 }
 
                 else if (!manualStop) // Motor reached a limit switch { OPEN, CLOSED }

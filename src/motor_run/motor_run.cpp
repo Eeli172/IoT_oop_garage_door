@@ -2,7 +2,6 @@
 
 #include <cmath>
 #include <functional>
-#include <iostream>
 
 #include "../interrupts/interrupts.h"
 #include "../macros/macros.h"

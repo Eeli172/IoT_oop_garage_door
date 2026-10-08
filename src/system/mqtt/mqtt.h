@@ -20,10 +20,14 @@ class MQTTManager
     bool initWiFi();
 
     /* MQTT METHODS */
-    // ESTABLISHING A CLIENT INSTANCE + CALLBACK FOR SUCCESSFUL CONNECTION TO BROKER
+    // CLIENT INSTANCE CREATION, DISCONNECTION, CALLBACK FOR CONNECTION MANAGEMENT
     bool establishMQTTClient();
     [[nodiscard]] bool disconnectMQTTClient();
     static void mqttConnectCb(mqtt_client_t *client, void *arg, mqtt_connection_status_t status);
+
+    // UTILITY FUNCTIONS
+    [[nodiscard]] bool getMqttStatus() const; // Determines the connection to the MQTT broker.
+    [[nodiscard]] std::optional<std::string> getNextCommand();
 
     // SUBSCRIBING TO TOPIC + CALLBACK FOR SUCCESSFUL SUBSCRIBE
     bool subscribeToTopic(const mqttSubState_t &subsState);
@@ -38,10 +42,6 @@ class MQTTManager
     static void mqttPublishCb(void *arg, err_t result);
     void setTopic(const std::string &newTopic);
 
-    // UTILITY FUNCTIONS
-    [[nodiscard]] bool getMqttStatus() const; // Determines the connection to the MQTT broker.
-    std::optional<std::string> getNextCommand();
-
     private:
     void getBrokerIpOctets() const;
 
@@ -51,8 +51,8 @@ class MQTTManager
 
     /* MQTT ATTRIBUTES */
     std::array<int, IP_OCTETS> brokerIpOctets;
-    bool mqttEnabled;
-    mqttInformation_t mqttInfo;
+    bool mqttEnabled; // Defines the state of connection between client and a broker.
+    mqttInformation_t mqttInfo; // Struct for holding client instance information.
 
     // DATA
     std::string nextCommandBuffer; // Holds the next command in line { RUN, STOP } .
