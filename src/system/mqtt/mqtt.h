@@ -30,7 +30,7 @@ class MQTTManager
     [[nodiscard]] std::optional<std::string> getNextCommand();
 
     // SUBSCRIBING TO TOPIC + CALLBACK FOR SUCCESSFUL SUBSCRIBE
-    bool subscribeToTopic(const mqttSubState_t &subsState);
+    bool subscribeToTopic(const std::string &topic, const mqttSubState_t &subsState);
     static void mqttSubscribeCb(void *arg, err_t result);
 
     // RECEIVING DATA FROM SUBSCRIBED TOPIC
@@ -38,9 +38,9 @@ class MQTTManager
     static void mqttIncomingDataCb(void *arg, const u8_t *data, u16_t len, u8_t flags);
 
     // PUBLISHING DATA TO TOPIC
-    bool publishToTopic(const std::string &msg);
+    bool publishToTopic(const std::string &topic, const std::string &msg);
     static void mqttPublishCb(void *arg, err_t result);
-    void setTopic(const std::string &newTopic);
+
 
     private:
     void getBrokerIpOctets() const;
@@ -56,8 +56,6 @@ class MQTTManager
 
     // DATA
     std::string nextCommandBuffer; // Holds the next command in line { RUN, STOP } .
-    std::string previousTopic; // Once a new topic is subscribed to, holds the info on which topic to first unsubscribe.
-    std::string currentTopic; // Holds the newest and currently subscribed topic.
 
 };
 

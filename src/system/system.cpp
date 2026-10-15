@@ -185,17 +185,16 @@ void System::subPub(const mqttSubState_t &transmissionType, const std::string &t
     std::string errorMsg;
     if (transmissionType == UNSUBSCRIBE || transmissionType == SUBSCRIBE)
     {
-            this->mqttBroker->setTopic(topic);
-            this->mqttBroker->subscribeToTopic(transmissionType); // tää pitäs laittaa iffin sisää tai jotenkin tarkastaa
+            this->mqttBroker->subscribeToTopic(topic, transmissionType);
     }
 
     else
     {
         if (msg.has_value())
         {
-            this->mqttBroker->setTopic(topic);
-            this->mqttBroker->publishToTopic(msg.value());
+            this->mqttBroker->publishToTopic(topic, msg.value());
         }
+
         else
         {
             errorMsg = "[MQTT-SUBPUB] --> msg had no value, transmission type: <PUBLISH>";
