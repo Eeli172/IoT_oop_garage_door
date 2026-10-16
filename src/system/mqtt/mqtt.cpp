@@ -16,8 +16,7 @@
 
 /* CLASS MQTTManager */
 MQTTManager::MQTTManager() :
-wiFiManager(WIFI()), hardwareEnabled(false), mqttEnabled(false), mqttInfo(nullptr),
-currentTopic(MQTT_TOPIC_RUN_INSTRUCTIONS)
+wiFiManager(WIFI()), hardwareEnabled(false), mqttEnabled(false), mqttInfo(nullptr)
 {
     this->getBrokerIpOctets();
 }
@@ -64,21 +63,17 @@ bool MQTTManager::establishMQTTClient()
         mqttInfo.mqtt_client = mqtt_client_new();
         cyw43_arch_lwip_end();
 
-        if (mqttInfo.mqtt_client)
-        {
-            IP_ADDR4(&mqttInfo.broker_ip, brokerIpOctets[0], brokerIpOctets[1], brokerIpOctets[2], brokerIpOctets[3]);
-
-            memset(&mqttInfo.ci, 0, sizeof(mqttInfo.ci));
-
-            mqttInfo.ci.client_id = MQTT_CLIENT_ID;
-            mqttInfo.ci.keep_alive = MQTT_CLIENT_KA_TIME;
-            mqttInfo.ci.client_pass = nullptr;
-            mqttInfo.ci.client_user = nullptr;
-            mqttInfo.ci.will_topic = nullptr;
-        }
-
-        else return false;
+        if (!mqttInfo.mqtt_client) return false;
     }
+
+    memset(&mqttInfo.ci, 0, sizeof(mqttInfo.ci));
+
+    IP_ADDR4(&mqttInfo.broker_ip, brokerIpOctets[0], brokerIpOctets[1], brokerIpOctets[2], brokerIpOctets[3]);
+    mqttInfo.ci.client_id = MQTT_CLIENT_ID;
+    mqttInfo.ci.keep_alive = MQTT_CLIENT_KA_TIME;
+    mqttInfo.ci.client_pass = nullptr;
+    mqttInfo.ci.client_user = nullptr;
+    mqttInfo.ci.will_topic = nullptr;
 
     cyw43_arch_lwip_begin();
     const err_t errCon = mqtt_client_connect(
@@ -126,8 +121,7 @@ void MQTTManager::mqttConnectCb(mqtt_client_t* client, void *arg, mqtt_connectio
                 mqttIncomingDataCb,
                 self);
 
-            self->setTopic(MQTT_TOPIC_RUN_INSTRUCTIONS);
-            self->subscribeToTopic(SUBSCRIBE);
+            self->subscribeToTopic(MQTT_TOPIC_RUN_INSTRUCTIONS,SUBSCRIBE);
         }
 
         else
@@ -158,22 +152,6 @@ std::optional<std::string> MQTTManager::getNextCommand()
         return tempCommandBuffer;
     }
     return std::nullopt;
-}
-
-
-/*
- * [ SETTERS ]
- * @setTopic() sets the instance's topic handling variable
- * with a new topic given as a param.
- */
-void MQTTManager::setTopic(const std::string& newTopic)
-{
-    if (!this->currentTopic.empty())
-    {
-        this->previousTopic = this->currentTopic;
-    }
-
-    this->currentTopic = newTopic;
 }
 
 
@@ -250,16 +228,17 @@ void MQTTManager::mqttPublishCb(void* arg, err_t result)
  * Main functionality is wrapped inside a special cyw43 defined mutex for thread-safety
  * and effectiveness without need of polling TCP/IP packets manually.
  */
-bool MQTTManager::subscribeToTopic(const mqttSubState_t &subsState)
+bool MQTTManager::subscribeToTopic(const std::string &topic, const mqttSubState_t &subsState)
 {
     cyw43_arch_lwip_begin();
     if (!mqtt_client_is_connected(this->mqttInfo.mqtt_client))
     {
+        printf("[MQTT-SUBSCRIBE-ERROR] --> MQTT client not connected to a broker.");
         cyw43_arch_lwip_end();
         return false;
     }
 
-    const err_t errSub = mqtt_sub_unsub(mqttInfo.mqtt_client, this->currentTopic.c_str(), 1, mqttSubscribeCb, this, subsState);
+    const err_t errSub = mqtt_sub_unsub(mqttInfo.mqtt_client, topic.c_str(), 1, mqttSubscribeCb, this, subsState);
     cyw43_arch_lwip_end();
 
     if (errSub != ERR_OK)
@@ -274,18 +253,19 @@ bool MQTTManager::subscribeToTopic(const mqttSubState_t &subsState)
 /* [ PUBLISH METHOD ]
  * @publishToTopic() Handles publishing to a topic and
  * takes a parameter msg of type string as a transmittable payload.
- * Special mutex also used.
+ * Special mutex also used which enables automatic TCP/IP packet handling in a background thread.
  */
-bool MQTTManager::publishToTopic(const std::string &msg)
+bool MQTTManager::publishToTopic(const std::string &topic, const std::string &msg)
 {
     cyw43_arch_lwip_begin();
     if (!mqtt_client_is_connected(this->mqttInfo.mqtt_client))
     {
+        printf("[MQTT-SUBSCRIBE-ERROR] --> MQTT client not connected to a broker.");
         cyw43_arch_lwip_end();
         return false;
     }
 
-    const err_t errSub = mqtt_publish(mqttInfo.mqtt_client, this->currentTopic.c_str(),
+    const err_t errSub = mqtt_publish(mqttInfo.mqtt_client, topic.c_str(),
         msg.c_str(), msg.length(),
         1, 0, mqttPublishCb, this);
     cyw43_arch_lwip_end();
