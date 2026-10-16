@@ -2,6 +2,7 @@
 
 #include <cmath>
 #include <functional>
+#include <iostream>
 
 #include "../interrupts/interrupts.h"
 #include "../macros/macros.h"
@@ -19,6 +20,9 @@ Motor::Motor(
     bool inverted) :
     step(0),
     motorStepCounter(0),
+    motorStepsBetweenLimits(0),
+    currentPositionSteps(0),
+    positionKnown(false),
     direction(true),
     errorState(false),
     calibrated(false),
@@ -52,11 +56,18 @@ bool Motor::runMotor(Encoder& encoder, const std::optional<std::function<bool(co
     bool lmswMtrStop = false;
     bool lmswEncStop = false;
     bool manualStop = false;
+    bool stoppedByPositionLimit = false;
+    // Remember the starting direction so motor position tracking stays correct after reversing.
+    const bool directionAtStart = direction;
+
 
     /* Reset movement state */
     motorStepCounter = 0;
     stepsSinceEncoder = 0;
     errorState = false;
+
+    // Update motor position if a limit switch is active
+    recalibrationOnTouch();
 
     limitSwitches->setInterrupt(std::vector{PIN_LMSW_MTR_OPEN, PIN_LMSW_ENC_CLOSED}, true);
 
@@ -72,6 +83,14 @@ bool Motor::runMotor(Encoder& encoder, const std::optional<std::function<bool(co
             manualStop = true;
             break;
         }
+
+        // Check travel limit before moving the next step
+        if (checkPositionLimit(directionAtStart))
+        {
+            stoppedByPositionLimit = true;
+            break;
+        }
+
         /* RUN ONE MOTOR STEP */
         runMotorSteps();
 
@@ -80,6 +99,26 @@ bool Motor::runMotor(Encoder& encoder, const std::optional<std::function<bool(co
         /* TRACK MOTOR AND ENCODER MOVEMENT */
         ++motorStepCounter;
         ++stepsSinceEncoder;
+
+        // Update estimated position once for each commanded motor step.
+        if (positionKnown)
+        {
+            currentPositionSteps += directionAtStart ? 1 : -1;
+        }
+        // Print motor position and movement status every 100 steps
+        if ((motorStepCounter % 100) == 0)
+        {
+            printf("[MOTOR STATUS] | Direction: %s | Steps: %d | Position: %d / %d | Position known: %d | Open switch: %d | Closed switch: %d | Error: %d\n",
+                directionAtStart ? "OPENING" : "CLOSING",
+                motorStepCounter,
+                currentPositionSteps,
+                motorStepsBetweenLimits,
+                positionKnown,
+                gpio_get(PIN_LMSW_MTR_OPEN),
+                gpio_get(PIN_LMSW_ENC_CLOSED),
+                errorState
+            );
+        }
 
         /* RESET ENCODER STEP COUNTER WHEN ENCODER MOVES */
         if (encoder.processInterrupts())
@@ -91,6 +130,15 @@ bool Motor::runMotor(Encoder& encoder, const std::optional<std::function<bool(co
         {
             checkForStuck();
         }
+        // Fallback when the exact position is unknown.
+        // This limits one run, but cannot establish the true door position.
+        if (!positionKnown &&
+            motorStepsBetweenLimits > 0 &&
+            motorStepCounter >= motorStepsBetweenLimits)
+        {
+
+            errorState = true;
+        }
 
         /* DISABLE LIMIT SWITCH INTERRUPTS */
         queue_try_remove(&lmswMtrEventQ, &lmswMtrStop);
@@ -99,6 +147,10 @@ bool Motor::runMotor(Encoder& encoder, const std::optional<std::function<bool(co
 
     limitSwitches->setInterrupt(std::vector{PIN_LMSW_MTR_OPEN, PIN_LMSW_ENC_CLOSED}, false);
 
+
+    // Finalize position before reversing direction
+    finalizeMotorPosition(directionAtStart, lmswMtrStop, lmswEncStop);
+
     //change direction and then stop
     this->reverseDirection();
 
@@ -106,7 +158,26 @@ bool Motor::runMotor(Encoder& encoder, const std::optional<std::function<bool(co
 
     if (errorState)
     {
+        positionKnown = false;
         return false;
+    }
+
+     if (stoppedByPositionLimit)
+    {
+        // The calculated endpoint was reached successfully.
+        if (directionAtStart)
+        {
+            // CLOSING: endpoint is CLOSED.
+            currentPositionSteps = motorStepsBetweenLimits;
+        }
+        else
+        {
+            // OPENING: endpoint is OPEN.
+            currentPositionSteps = 0;
+        }
+
+        positionKnown = true;
+
     }
 
     return manualStop;
@@ -125,7 +196,13 @@ void Motor::calibrateMotor(Encoder& encoder)
     errorState = false;
 
     int totalMotorSteps = 0;
+    int closingsteps = 0;
     int totalEncoderSteps = 0;
+
+
+    motorStepsBetweenLimits = 0;
+    currentPositionSteps = 0;
+    positionKnown = false;
 
     bool reachedMtr(false);
 
@@ -134,16 +211,62 @@ void Motor::calibrateMotor(Encoder& encoder)
         encoder.resetPosition();
         motorStepCounter = 0;
 
+        const bool startedAtMotorLimit =
+            gpio_get(PIN_LMSW_MTR_OPEN);
+
+        const bool measuringLimitDistance =
+            startedAtMotorLimit && direction;
+
+        const bool directionBeforeRun = direction;
+
+
         runMotor(encoder, std::nullopt);
+
+
+
+        /* RUN CALIBRATION IN BOTH DIRECTIONS */
+
+        if (gpio_get(PIN_LMSW_MTR_OPEN))
+        {
+            currentPositionSteps = 0;
+            positionKnown = true;
+            reachedMtr = true;
+        }
+        // Check why calibrated travel distance is not being saved
+
+        // DO NOT DELETE THIS PRINT, SOMETHING IN TIMING IS MESSED UP!!!!!!!
+        // IF DELETED THEN IT WILL SAY ([CALIBRATION ERROR] Invalid calibration values)!!!!!
+        //MAYBE IF OTHER PRINT WERE DELETED THEN IT SOULD WORK BUT NOT TESTED!!!!!!!
+
+        printf("[CALIBRATION CHECK] | Started at open: %d | Measuring travel: %d | Error: %d | Closed switch: %d | Steps: %d\n",
+            startedAtMotorLimit,
+            measuringLimitDistance,
+            errorState,
+            gpio_get(PIN_LMSW_ENC_CLOSED),
+            motorStepCounter
+        );
+        //
+        //
+        //
+
+
+
+
+        if (measuringLimitDistance &&
+            !errorState &&
+            gpio_get(PIN_LMSW_ENC_CLOSED))
+        {
+            motorStepsBetweenLimits = motorStepCounter;
+            currentPositionSteps = motorStepsBetweenLimits;
+            positionKnown = true;
+
+        }
 
         totalMotorSteps += motorStepCounter;
         totalEncoderSteps += std::abs(encoder.getPosition());
 
         /* RUN CALIBRATION IN BOTH DIRECTIONS */
-        if (gpio_get(PIN_LMSW_MTR_OPEN))
-        {
-            reachedMtr = true;
-        }
+
 
         /* STOP AT ENCODER LIMIT SWITCH = CLOSED STATE */
         if (reachedMtr == true && gpio_get(PIN_LMSW_ENC_CLOSED))
@@ -152,13 +275,13 @@ void Motor::calibrateMotor(Encoder& encoder)
         }
     }
 
+
     /* CALCULATE AND STORE MOTOR-TO-ENCODER RATIO*/
     /* AVERAGE RATIO 205-210*/
     const float ratio =
         calculateMotorStepsPerEncoder(
             totalMotorSteps,
             totalEncoderSteps);
-
     movementCalibration.motorStepsPerEncoder = ratio;
     movementCalibration.valid = ratio > 0.0f;
 
@@ -168,20 +291,38 @@ void Motor::calibrateMotor(Encoder& encoder)
     encoder.resetPosition();
     motorStepCounter = 0;
 
-    // std::cout
-    //     << "[CALIBRATION] Total Motor: "
-    //     << totalMotorSteps
-    //     << " | Total Encoder: "
-    //     << totalEncoderSteps
-    //     << " | Ratio: "
-    //     << ratio
-    //     << std::endl;
+    std::cout
+        << "[CALIBRATION] Total Motor: "
+        << totalMotorSteps
+        << " | Total Encoder: "
+        << totalEncoderSteps
+        << " | Ratio: "
+        << ratio
+        << std::endl;
+
 
     /* MAKE SURE THE DOOR IS LEFT CLOSED AFTER CALIBRATION */
     if (gpio_get(PIN_LMSW_MTR_OPEN)) runMotor(encoder, std::nullopt);
 }
 
 
+
+void Motor::recalibrationOnTouch()
+{
+    // Reset position when the open limit switch is reached
+    if (gpio_get(PIN_LMSW_MTR_OPEN))
+    {
+        currentPositionSteps = 0;
+        positionKnown = true;
+    }
+    // Set position to maximum when the closed limit switch is reached
+    else if (motorStepsBetweenLimits > 0 &&
+             gpio_get(PIN_LMSW_ENC_CLOSED))
+    {
+        currentPositionSteps = motorStepsBetweenLimits;
+        positionKnown = true;
+    }
+}
 /* MOTOR SETTERS */
 void Motor::setMtrStpsPerEncder(float steps)
 {
@@ -198,6 +339,16 @@ void Motor::setCalibState(const bool& calibState)
     this->calibrated = calibState;
 }
 
+void Motor::setMotorStepsBetweenLimits(int steps)
+{
+    motorStepsBetweenLimits = steps > 0 ? steps : 0;
+
+    if (motorStepsBetweenLimits == 0)
+    {
+        currentPositionSteps = 0;
+        positionKnown = false;
+    }
+}
 
 /* MOTOR GETTERS */
 float Motor::getMtrStpsPerEncder() const
@@ -215,6 +366,10 @@ bool Motor::getErrorState() const
     return errorState;
 }
 
+int Motor::getMotorStepsBetweenLimits() const
+{
+    return motorStepsBetweenLimits;
+}
 
 /* ########## P R I V A T E ########## */
 
@@ -255,6 +410,7 @@ bool Motor::stuckDetectionEnabled() const
 {
     return calibrated && movementCalibration.motorStepsPerEncoder > 0.0f;
 }
+
 /* CALCULATE MOTOR STEPS REQUIRED FOR ONE ENCODER STEP */
 float Motor::calculateMotorStepsPerEncoder(
     int motorSteps,
@@ -310,4 +466,74 @@ void Motor::checkForStuck()
 
         errorState = true;
     }
+}
+
+// Check if the next motor step would exceed the travel limits
+bool Motor::checkPositionLimit(bool directionAtStart) const
+{
+    // Only check travel limits when the current position is known
+    if (positionKnown && motorStepsBetweenLimits > 0)
+    {
+        // Calculate the position after the next step
+        const int predictedPosition =
+            currentPositionSteps + (directionAtStart ? 1 : -1);
+
+        // Stop if the next step would exceed the travel limits
+        if (predictedPosition < 0 ||
+            predictedPosition > motorStepsBetweenLimits)
+        {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+// Update motor position after movement finishes
+void Motor::finalizeMotorPosition(bool directionAtStart, bool lmswMtrStop, bool lmswEncStop)
+{
+    // Mark position as unknown if a motor error occurred
+    if (errorState)
+    {
+        positionKnown = false;
+    }
+    // Confirm OPEN endpoint
+    else if (!directionAtStart &&
+             (lmswMtrStop || gpio_get(PIN_LMSW_MTR_OPEN)))
+    {
+        currentPositionSteps = 0;
+        positionKnown = true;
+    }
+    // Confirm CLOSED endpoint
+    else if (directionAtStart &&
+             motorStepsBetweenLimits > 0 &&
+             (lmswEncStop || gpio_get(PIN_LMSW_ENC_CLOSED)))
+    {
+        currentPositionSteps = motorStepsBetweenLimits;
+        positionKnown = true;
+    }
+}
+
+//restores position on boot
+void Motor::restorePosition(int steps, bool known)
+{
+    if (!known ||
+        motorStepsBetweenLimits <= 0 ||
+        steps < 0 ||
+        steps > motorStepsBetweenLimits)
+    {
+        currentPositionSteps = 0;
+        positionKnown = false;
+        return;
+    }
+
+    currentPositionSteps = steps;
+    positionKnown = true;
+
+    printf(
+        "[POSITION RESTORE] Position: %d / %d | Known: %d\n",
+        currentPositionSteps,
+        motorStepsBetweenLimits,
+        positionKnown
+    );
 }

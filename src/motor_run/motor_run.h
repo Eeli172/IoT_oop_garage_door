@@ -39,17 +39,23 @@ public:
 
     /*Calibrate motor and leave the door in the closed position. */
     void calibrateMotor(Encoder& encoder);
+    // Recalibrate motor position when a limit switch is touched
+    void recalibrationOnTouch();
 
     /* MOTOR SETTERS */
     void setMtrStpsPerEncder(float steps);
     void setDirection(bool direction);
     void setCalibState(const bool& calibState);
+    void setMotorStepsBetweenLimits(int steps);
 
 
     /* MOTOR GETTERS */
     float getMtrStpsPerEncder() const;
     bool getDirection() const;
     bool getErrorState() const;
+    int getMotorStepsBetweenLimits() const;
+
+    void restorePosition(int steps, bool known);
 
 private:
     /* CLASS POINTERS */
@@ -63,6 +69,9 @@ private:
     static int InstructionsMatrix[8][4];
     int step;
     int motorStepCounter;
+    int motorStepsBetweenLimits;
+    int currentPositionSteps;
+    bool positionKnown;
     bool direction; // true == moving towards the encoder
     bool errorState; // true == door stuck
     bool calibrated;
@@ -92,6 +101,12 @@ private:
 
     // Check whether the motor has stopped moving
     void checkForStuck();
+
+    // Check if the next motor step would exceed the travel limits
+    bool checkPositionLimit(bool directionAtStart) const;
+
+    // Update motor position after movement finishes
+    void finalizeMotorPosition(bool directionAtStart,bool lmswMtrStop, bool lmswEncStop);
 };
 
 

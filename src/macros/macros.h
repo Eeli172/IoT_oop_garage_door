@@ -32,6 +32,7 @@
 #define EEPROM_ADDR_STEPS_PER_ENCODER 0x0004 // 4 - 11 (4 bytes + inverted)
 #define EEPROM_ADDR_DIRECTION 0x000C // 12 - 13 (1 byte + inverted)
 #define EEPROM_ADDR_MANUALSTOP 0x000E // 14 - 15 (1 byte + inverted)
+#define EEPROM_ADDR_MOTOR_STEPS_BETWEEN_LIMITS 0x0010
 
 #define EEPROM_ADDR_BYTES 2 
 #define EEPROM_BUFFER_SIZE_BYTE (BYTE * 2) // (data + ~data)

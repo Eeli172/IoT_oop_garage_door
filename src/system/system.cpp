@@ -32,7 +32,7 @@ void System::setCalibState(const calibrationState_t& state)
     this->calibState = state;
     if (state == CALIBRATED) {
         this->motor->setCalibState(true);
-    } 
+    }
     else if (state == NOT_CALIBRATED) {
         this->motor->setCalibState(false);
     }
@@ -63,7 +63,7 @@ void System::setWaitingForCommand(bool waiting)
     waitingForCommand = waiting;
 }
 
-void System::setRecoverFromPowerOff(bool recoverState) 
+void System::setRecoverFromPowerOff(bool recoverState)
 {
     this->recoverFromPowerOff = recoverState;
 }
@@ -106,7 +106,7 @@ bool System::getWaitingForCommand() const
     return waitingForCommand;
 }
 
-bool System::getRecoverFromPowerOff() const 
+bool System::getRecoverFromPowerOff() const
 {
     return this->recoverFromPowerOff;
 }
@@ -246,13 +246,17 @@ void System::saveSystem(uint16_t addr) {
         case EEPROM_ADDR_DOOR_STATE:
             value = this->eeprom->write_byte(addr, static_cast<uint8_t>(this->getCurrentDoorState()));
             break;
-            
+
         case EEPROM_ADDR_DIRECTION:
             value = this->eeprom->write_byte(addr, this->motor->getDirection());
             break;
 
         case EEPROM_ADDR_STEPS_PER_ENCODER:
             value = this->eeprom->write_float(addr, this->motor->getMtrStpsPerEncder());
+            break;
+
+        case EEPROM_ADDR_MOTOR_STEPS_BETWEEN_LIMITS:
+            value = this->eeprom->write_float(addr, static_cast<float>(this->motor->getMotorStepsBetweenLimits()));
             break;
 
         default:
@@ -271,7 +275,7 @@ void System::loadSystem() {
         std::cout << "[SYS-LOAD] --> CALIB_STATE: previous value not found" << std::endl;
         return;
     }
-    
+
     if (calibState.value() == CALIBRATING) {
         std::cout << "[SYS-LOAD] --> CALIB_STATE: calibration needed" << std::endl;
         return;
@@ -284,7 +288,7 @@ void System::loadSystem() {
         std::cout << "[SYS-LOAD] --> DOOR_STATE: previous value not found" << std::endl;
         return;
     }
-    
+
 
     auto direction = this->eeprom->read_byte(EEPROM_ADDR_DIRECTION); // DIRECTION
 
@@ -305,10 +309,49 @@ void System::loadSystem() {
         return;
     }
 
+    // Read calibrated motor travel distance from EEPROM
+    auto savedMotorStepsBetweenLimits = this->eeprom->read_float( EEPROM_ADDR_MOTOR_STEPS_BETWEEN_LIMITS);
+
+    // Check if saved motor travel distance exists and is valid
+    if (!savedMotorStepsBetweenLimits.has_value() || savedMotorStepsBetweenLimits.value() <= 0.0f)
+    {std::cout
+            << "[SYS-LOAD] Motor travel distance missing or invalid."
+            << " Calibration needed."
+            << std::endl;
+
+        this->setCalibState(NOT_CALIBRATED);
+        return;
+    }
+
+    // Convert restored motor travel distance to an integer
+    const int restoredTravelSteps = static_cast<int>(savedMotorStepsBetweenLimits.value());
+    //prints
+    std::cout
+        << "[SYS-LOAD] Restored calibrated travel: "
+        << restoredTravelSteps
+        << " motor steps"
+        << std::endl;
+
     this->setCalibState((calibrationState_t) calibState.value());
     this->setDoorStates((doorState_t) doorState.value());
     this->motor->setMtrStpsPerEncder(stepsPerEncoder.value());
     this->motor->setDirection((bool) direction.value());
+    this->motor->setMotorStepsBetweenLimits(restoredTravelSteps);
+
+    // Reconstruct position from the saved door state.
+    if (doorState.value() == OPEN)
+    {
+        this->motor->restorePosition(0, true);
+    }
+    else if (doorState.value() == CLOSED)
+    {
+        this->motor->restorePosition(restoredTravelSteps, true);
+    }
+    else
+    {
+        // IN_BETWEEN: position may have changed during power loss.
+        this->motor->restorePosition(0, false);
+    }
 
     if (calibState.value() == CALIBRATED) {
         this->buttons->setInterrupt(std::vector{PIN_SW1}, true);
@@ -331,7 +374,7 @@ void System::createStatusLeds()
             PIN_LED_3
         }, weak_from_this());
     }
-    
+
 void System::updateStatusLeds() const
 {
     statusLeds->updateCall();

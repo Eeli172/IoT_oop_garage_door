@@ -75,10 +75,23 @@ int main()
 
             std::cout << "Calibration: started" << std::endl;
             stepperMotor->calibrateMotor(*encoder);
+
+            // Check if calibration values are valid
+            if (stepperMotor->getMotorStepsBetweenLimits() <= 0 || stepperMotor->getMtrStpsPerEncder() <= 0.0f)
+            {
+                //in motor.cpp calibrating there is print that fixed timing, if its commented then this would invalidate calibration,
+                //maybe its not even needed but its good to have good calibration
+                std::cerr << "[CALIBRATION ERROR] Invalid calibration values"<< std::endl;
+
+                sys->setCalibStateAndSave(NOT_CALIBRATED);
+                sys->enableStatusLeds(true);
+                break;
+            }
             std::cout << "Calibration: finished" << std::endl;
 
             // set & save parameters
             sys->saveSystem(EEPROM_ADDR_STEPS_PER_ENCODER);
+            sys->saveSystem(EEPROM_ADDR_MOTOR_STEPS_BETWEEN_LIMITS);
             sys->saveSystem(EEPROM_ADDR_DIRECTION);
             sys->setDoorStatesAndSave(CLOSED); 
             
