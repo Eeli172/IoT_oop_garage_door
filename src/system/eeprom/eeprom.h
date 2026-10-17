@@ -37,7 +37,7 @@ public:
     
 private:
     /*
-    Write --payload-- into eeporm. 
+    Write --payload-- into eeprom.
     Return: true (succeed)  ||  false (failed)
     */
     bool save_data(std::span<const uint8_t> payload) const;

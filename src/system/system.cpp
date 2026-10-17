@@ -7,13 +7,11 @@
 #include "system.h"
 #include "eeprom/eeprom.h"
 #include "gpios/leds/leds.h"
-
 #include "types/types.h"
 
 
 /* ########## P U B L I C ########## */
 
-/* SYSTEM INITIALIZATION */
 System::System() :
 calibState(NOT_CALIBRATED),
 currentDoorState(CLOSED),
@@ -24,8 +22,13 @@ mqttBroker(std::make_unique<MQTTManager>()),
 eeprom(std::make_unique<Eeprom>())
 {}
 
-
-/* SYSTEM SETTERS */
+/*
+ *
+ * =====================================================================================================================
+ * CLASS SETTERS
+ * =====================================================================================================================
+ *
+ */
 
 void System::setCalibState(const calibrationState_t& state)
 {
@@ -78,8 +81,13 @@ void System::setButtons(const std::shared_ptr<Switches> &btns)
     this->buttons = btns;
 }
 
-
-/* SYSTEM GETTERS */
+/*
+ *
+ * =====================================================================================================================
+ * CLASS GETTERS
+ * =====================================================================================================================
+ *
+ */
 
 calibrationState_t System::getCalibState() const
 {
@@ -111,28 +119,27 @@ bool System::getRecoverFromPowerOff() const
     return this->recoverFromPowerOff;
 }
 
-
-
-/* * * * * *  I O    D E V I C E S  * * * * * */
-
-
-/* MQTT INTERFACE */
-
-/* [ WI-FI CONNECTION METHOD ]
- * Attempts connection to a Wi-Fi with the given parameters at src/macros/macros.h
- * Uses Pico SDK's built in CYW43 technology.
- * SSID AND PASSWORD required.
+/*
+ *
+ * =====================================================================================================================
+ * IO DEVICE METHODS
+ * =====================================================================================================================
+ *
  */
+
 void System::connectToWifi() const
 {
-    this->mqttBroker->initWiFi();
+    if (this->mqttBroker->initWiFi())
+    {
+        std::cout << "[WIFI-STATUS] --> Successfully connected to Wi-Fi." << std::endl;
+    }
+
+    else
+    {
+        std::cout << "[WIFI-STATUS] --> Error in attempt to connect to a Wi-Fi." << std::endl;
+    }
 }
 
-
-/* [ MQTT CONNECTION METHOD ]
- * Covers the entire path from connecting to a Wi-Fi --> establishing an MQTT client instance.
- * Uses Pico SDK's built in lightweight IP (LWIP) protocol defined in src/system/mqtt/lwipopts.h
- */
 void System::connectToMQTTServer() const
 {
     if (!this->mqttBroker->getMqttStatus())
@@ -154,10 +161,6 @@ void System::connectToMQTTServer() const
     }
 }
 
-
-/* [ MQTT CLIENT DISCONNECTION INTERFACE METHOD ]
- * Attempts disconnection of an active connection to a broker.
- */
 void System::disconnectFromMQTTServer() const
 {
     if (this->mqttBroker->getMqttStatus())
@@ -165,19 +168,15 @@ void System::disconnectFromMQTTServer() const
         if (this->mqttBroker->disconnectMQTTClient())
         {
             std::cout << "[MQTT-SYSTEM-STATUS] --> MQTT disconnected successfully from the broker." << std::endl;
-            return;
         }
     }
-    std::cout << "[MQTT-SYSTEM-STATUS] --> MQTT disconnection attempt failed, were you even connected to an active broker?" << std::endl;
+
+    else
+    {
+        std::cout << "[MQTT-SYSTEM-STATUS] --> MQTT disconnection attempt failed, were you even connected to an active broker?" << std::endl;
+    }
 }
 
-
-/* [ SUBSCRIBE/PUBLISH INTERFACE METHOD ]
- * @subPub() Hybrid method used for all types of MQTT transmissions { SUBSCRIBE, UNSUBSCRIBE, PUBLISH }
- * Enum @mqttSubState_t used to set the transmission type,
- * @topic to define the transmission's target topic,
- * @msg as std::optional<> for PUBLISHES
- */
 void System::subPub(const mqttSubState_t &transmissionType, const std::string &topic, const std::optional<std::string> &msg) const
 {
     if (!this->mqttBroker->getMqttStatus()) return;
@@ -204,13 +203,6 @@ void System::subPub(const mqttSubState_t &transmissionType, const std::string &t
     if (!errorMsg.empty())std::cout << errorMsg << std::endl;
 }
 
-
-/*
- * Only system accepted MQTT drive commands { OPEN, CLOSE, REVERSE, STOP } are checked here.
- * MQTT publish according to the correctness of the command,
- * incorrect = "INSTRUCTION FAILED",
- * correct = "INSTRUCTION SUCCESSFULLY EXECUTED"
- */
 bool System::validateDriveCommand(const std::string &rC) const
 {
     const std::optional<std::string> driveCommand = this->mqttBroker->getNextCommand();
@@ -233,8 +225,14 @@ bool System::validateDriveCommand(const std::string &rC) const
     return validCommand;
 }
 
+/*
+ *
+ * =====================================================================================================================
+ * EEPROM INTERFACE
+ * =====================================================================================================================
+ *
+ */
 
-/* EEPROM INTERFACE */
 void System::saveSystem(uint16_t addr) {
     bool value = false;
 
@@ -266,7 +264,6 @@ void System::saveSystem(uint16_t addr) {
         std::cerr << "[ERROR-SYS-SAVE] --> failed saving" << std::endl;
     }
 }
-
 
 void System::loadSystem() {
     auto calibState = this->eeprom->read_byte(EEPROM_ADDR_CALIBRATION_STATE); // CALIB_STATE
@@ -362,8 +359,14 @@ void System::loadSystem() {
     }
 }
 
+/*
+ *
+ * =====================================================================================================================
+ * STATUS LEDS
+ * =====================================================================================================================
+ *
+ */
 
-/* STATUS LEDS INTERFACE */
 void System::createStatusLeds()
 {
     this->statusLeds =

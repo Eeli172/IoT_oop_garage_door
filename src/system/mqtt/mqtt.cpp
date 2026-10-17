@@ -8,50 +8,43 @@
 #include "mqtt.h"
 #include "lwip/apps/mqtt.h"
 #include "../personal_config.h"
-
 #include "../../macros/macros.h"
 #include "pico/cyw43_arch.h"
 #include "types/types.h"
 
 
-/* CLASS MQTTManager */
 MQTTManager::MQTTManager() :
-wiFiManager(WIFI()), hardwareEnabled(false), mqttEnabled(false), mqttInfo(nullptr)
+wiFiManager(WIFI()), hardwareEnabled(false), brokerIpOctets(),mqttEnabled(false), mqttInfo(nullptr)
 {
     this->getBrokerIpOctets();
 }
 
 /*
- * [ MQTT CONNECTION MANAGEMENT METHODS ]
- * @initWifi() Wi-Fi initiation,
- * @establishMQTTClient() MQTT client instance creation,
- * @disconnectMQTTClient() Disconnecting a connected MQTT client from an active broker,
- * @mqttConnectCb Callback for client-broker connection changes,
- * handled asynchronously by a background thread.
+ *
+ * =====================================================================================================================
+ * MQTT CONNECTION MANAGEMENT METHODS
+ * =====================================================================================================================
+ *
  */
+
 bool MQTTManager::initWiFi()
 {
     if (!this->hardwareEnabled)
     {
         if (this->wiFiManager.init())
         {
-            std::cout << "[OK] --> Wi-Fi Hardware initialization successful." << std::endl;
+            std::cout << "[HARDWARE-SYSTEM-STATUS] --> Wi-Fi Hardware initialization successful." << std::endl;
             this->hardwareEnabled = true;
         }
         else
         {
-            std::cout << "[FAIL] --> Wi-Fi Hardware initialization failed." << std::endl;
+            std::cout << "[HARDWARE-SYSTEM-STATUS] --> Wi-Fi Hardware initialization failed." << std::endl;
             return false;
         }
     }
 
-    if (this->wiFiManager.connectWifi())
-    {
-        std::cout << "[WIFI-SYSTEM-STATUS] --> Wi-Fi connection successful." << std::endl;
-        return true;
-    }
+    if (this->wiFiManager.connectWifi()) return true;
 
-    std::cout << "[WIFI-SYSTEM-STATUS] --> Wi-Fi connection failure." << std::endl;
     return false;
 }
 
@@ -132,12 +125,14 @@ void MQTTManager::mqttConnectCb(mqtt_client_t* client, void *arg, mqtt_connectio
     }
 }
 
-
 /*
- * [ GETTERS ]
- * @getMqttStatus() Returns the current Mqtt connection status (client to broker)
- * @getNextCommand() Returns the most recent commands for the system
+ *
+ * =====================================================================================================================
+ * CLASS GETTERS
+ * =====================================================================================================================
+ *
  */
+
 bool MQTTManager::getMqttStatus() const
 {
     return this->mqttEnabled;
@@ -145,24 +140,24 @@ bool MQTTManager::getMqttStatus() const
 
 std::optional<std::string> MQTTManager::getNextCommand()
 {
-    if (!this->nextCommandBuffer.empty())
+    if (this->nextCommandBuffer.empty())
     {
-        std::string tempCommandBuffer = this->nextCommandBuffer;
-        this->nextCommandBuffer.clear();
-        return tempCommandBuffer;
+        return std::nullopt;
     }
-    return std::nullopt;
+
+    std::string tempCommandBuffer = std::move(this->nextCommandBuffer);
+    this->nextCommandBuffer.clear();
+    return tempCommandBuffer;
 }
 
-
 /*
- * [ DATA CALLBACKS ]
- * @mqttIncomingPublishCb() Gives initial information of an incoming
- * publish from a subscribed topic
  *
- * @mqttIncomingDataCb() Handler for the incoming publish, data is appended to a variable
- * of type string
+ * =====================================================================================================================
+ * MQTT INCOMING DATA CALLBACK
+ * =====================================================================================================================
+ *
  */
+
 void MQTTManager::mqttIncomingPublishCb(void *arg, const char *topic, u32_t tot_len)
 {
    printf("[MQTT-DATA-CB] --> Incoming message with length of: %d, from topic: %s\n", tot_len, topic);
@@ -184,11 +179,14 @@ void MQTTManager::mqttIncomingDataCb(void *arg, const u8_t *data, u16_t len, u8_
     }
 }
 
-
-/* [ SUBSCRIBE CALLBACK ]
- * @mqttSubscribeCb() Reports whether a subscribe transmission
- * to a target topic was successful or not.
+/*
+ *
+ * =====================================================================================================================
+ * MQTT SUBSCRIBE CALLBACK
+ * =====================================================================================================================
+ *
  */
+
 void MQTTManager::mqttSubscribeCb(void* arg, err_t result)
 {
     if (auto *self = static_cast<MQTTManager*>(arg); self)
@@ -203,10 +201,14 @@ void MQTTManager::mqttSubscribeCb(void* arg, err_t result)
     }
 }
 
-/* [ PUBLISH CALLBACK ]
- * @mqttPublishCb() Reports whether a publish transmission
- * to a target topic was successful or not.
+/*
+ *
+ * =====================================================================================================================
+ * MQTT PUBLISH CALLBACK
+ * =====================================================================================================================
+ *
  */
+
 void MQTTManager::mqttPublishCb(void* arg, err_t result)
 {
     if (auto *self = static_cast<MQTTManager*>(arg); self)
@@ -221,13 +223,14 @@ void MQTTManager::mqttPublishCb(void* arg, err_t result)
     }
 }
 
-
 /*
- * [ SUBSCRIBE METHOD ]
- * @subscribeToTopic() Handles subscribing to a topic.
- * Main functionality is wrapped inside a special cyw43 defined mutex for thread-safety
- * and effectiveness without need of polling TCP/IP packets manually.
+ *
+ * =====================================================================================================================
+ * MQTT SUBSCRIBE
+ * =====================================================================================================================
+ *
  */
+
 bool MQTTManager::subscribeToTopic(const std::string &topic, const mqttSubState_t &subsState)
 {
     cyw43_arch_lwip_begin();
@@ -250,11 +253,14 @@ bool MQTTManager::subscribeToTopic(const std::string &topic, const mqttSubState_
     return true;
 }
 
-/* [ PUBLISH METHOD ]
- * @publishToTopic() Handles publishing to a topic and
- * takes a parameter msg of type string as a transmittable payload.
- * Special mutex also used which enables automatic TCP/IP packet handling in a background thread.
+/*
+ *
+ * =====================================================================================================================
+ * MQTT PUBLISH
+ * =====================================================================================================================
+ *
  */
+
 bool MQTTManager::publishToTopic(const std::string &topic, const std::string &msg)
 {
     cyw43_arch_lwip_begin();
@@ -279,6 +285,13 @@ bool MQTTManager::publishToTopic(const std::string &topic, const std::string &ms
     return true;
 }
 
+/*
+ *
+ * =====================================================================================================================
+ * BROKER IP ADDRESS PARSE
+ * =====================================================================================================================
+ *
+ */
 
 void MQTTManager::getBrokerIpOctets() const {
     const char* ipStr = MQTT_BROKER_IP;
