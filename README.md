@@ -14,6 +14,8 @@ By coupling physical limit switch interrupts with real-time feedback from a quad
 
 ## Key Technical Features
 
+- **Thread-Safe LwIP/CYW43 Architecture:** Ensures safe asynchronous MQTT execution across background network worker threads using Pico SDK synchronization mutexes (`cyw43_arch_lwip_begin()` / `cyw43_arch_lwip_end()`).
+- **Dynamic Mid-Travel Control (`STOP` & `REVERSE`):** Manual user override via switch (`SW1`) or MQTT command (`STOP`) halts movement immediately. Subsequent triggers (`REVERSE`) reverse the drive direction mid-travel.
 - **Dual-Layer Position & Obstacle Tracking:** Combines hardware interrupts from physical limit switches with step-to-encoder pulse validation to detect stuck doors/obstructions.
 - **Deterministic Finite State Machine (FSM):** Fully isolated calibration phases (`NOT_CALIBRATED`, `CALIBRATING`, `CALIBRATED`) and door operational states (`CLOSED`, `IN_BETWEEN`, `OPEN`).
 - **EEPROM Fault Recovery:** Stores critical variables (state, direction, steps-per-encoder ratio, end-to-end limits) in non-volatile storage to allow automatic recovery (`recoverFromPowerOff`) from an error state.
