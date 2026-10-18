@@ -1,4 +1,4 @@
-# Automatic Door & Garage Control System (Embedded C++)
+# Automatic Door & Garage Control System
 
 An industrial-grade, embedded automatic sliding and garage door controller built using modern C++ principles. The project features deterministic Finite State Machine (FSM) control, hardware interrupt-driven safety sensors (ISRs), RAII resource management, MQTT IoT integration for remote telemetry, and non-volatile EEPROM state recovery during brownouts or hard resets.
 
