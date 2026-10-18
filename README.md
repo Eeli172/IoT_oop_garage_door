@@ -1,53 +1,79 @@
-# Automatic Door & Garage Control System
+# Smart Embedded Door Controller (RP2040 / C++)
 
-Embedded automatic sliding and garage door controller built using modern C++ principles. The project features deterministic Finite State Machine (FSM) control, hardware interrupt-driven safety sensors (ISRs), RAII resource management, MQTT IoT integration for remote telemetry, and non-volatile EEPROM state recovery during brownouts or hard resets.
+An industrial-grade, embedded automatic door controller running on the **Raspberry Pi Pico (RP2040 MCU)**. Written in modern C++ utilizing the Pico SDK, this firmware implements deterministic Finite State Machines (FSM), interrupt-driven hardware events, dual-layer position & collision detection (Limit Switches + Rotary Encoder), EEPROM persistent recovery, and remote IoT telemetry via MQTT over Wi-Fi.
+
+---
+
+## Table of Contents
+
+- [Overview](#overview)
+- [Key Technical Features](#key-technical-features)
+- [Hardware & Sensing Architecture](#hardware--sensing-architecture)
+- [System State Machine (FSM)](#system-state-machine-fsm)
+- [Software Architecture Highlights](#software-architecture-highlights)
+  - [1. Dual-Layer Obstacle & Limit Detection](#1-dual-layer-obstacle--limit-detection)
+  - [2. Crash Recovery & Power-Off Persistence](#2-crash-recovery--power-off-persistence)
+  - [3. Modern C++ & Memory Management](#3-modern-c--memory-management)
+- [MQTT Topics & Interface](#mqtt-topics--interface)
+- [Repository Structure](#repository-structure)
+- [Main Application Loop (main.cpp)](#main-application-loop-maincpp)
+- [Getting Started](#getting-started)
+  - [Prerequisites](#prerequisites)
+  - [Build and Flash](#build-and-flash)
+- [License](#license)
 
 ---
 
 ## Overview
 
-Automated physical barriers, such as sliding gates and garage doors, require absolute safety, sub-millisecond responsiveness to obstacle detection, and deterministic fault recovery. 
-This project delivers a complete firmware solution designed to bridge low-level microcontroller drivers with high-level IoT functionality. Interrupt services ensure that limit switches and optical obstacle curtains take hardware priority over asynchronous tasks like MQTT messaging and status publishing.
+Automated physical barriers demand absolute safety, real-time responsiveness, and seamless fault handling. This firmware controls a 4-coil stepper motor to drive a door mechanism between physical bounds while constantly monitoring movement metrics.
+
+By coupling physical limit switch interrupts with real-time feedback from a quadrature **Rotary Encoder**, the system mathematically verifies motor execution step-by-step. If an obstacle prevents physical movement, the system instantly detects step desynchronization, triggers a safety fault, and notifies the network via MQTT.
 
 ---
 
-## Key Features
+## Key Technical Features
 
-- **Hardware Interrupt-Driven Sensing (ISRs):** Instantaneous limit switch detection and safety curtain triggering with sub-millisecond response time.
-- **Object-Oriented Design (OOP):** Modular architecture separating hardware driver abstractions, network handling, and control logic.
-- **RAII Resource Management:** Safe initialization and deterministic cleanup of hardware peripherals, GPIO pins, and interrupt instances.
-- **Persistent Memory (EEPROM):** Preserves operating state, cycle counts, and calibration parameters across power loss or system resets with checksum verification.
-- **Remote Telemetry (MQTT):** Bi-directional communication for remote opening/closing, status monitoring, and real-time fault reporting.
-- **Failsafe State Machine:** Deterministic state handling covering timeouts, obstruction reversals, and emergency manual lockouts.
-
----
-
-## Hardware Architecture
-
-| Component | Purpose / Function |
-| :--- | :--- |
-| **Microcontroller** | ESP32 / STM32 / ATmega328P |
-| **Actuators** | Dual H-Bridge Driver / Relay Module (Open/Close Control) |
-| **Limit Switches** | Mechanical/Magnetic End-of-Travel Switches (Interrupt Driven) |
-| **Safety Sensor** | Infrared Optical Beam / Safety Edge Sensor |
-| **Network Interface** | Wi-Fi / Ethernet Module for MQTT Connection |
-| **Status Indicators** | Status LEDs & Local Buzzer |
+- **Dual-Layer Position & Obstacle Tracking:** Combines hardware interrupts from physical limit switches with step-to-encoder pulse validation to detect stuck doors/obstructions instantly.
+- **Deterministic Finite State Machine (FSM):** Fully isolated calibration phases (`NOT_CALIBRATED`, `CALIBRATING`, `CALIBRATED`) and door operational states (`CLOSED`, `IN_BETWEEN`, `OPEN`).
+- **EEPROM Fault Recovery:** Stores critical variables (state, direction, steps-per-encoder ratio, end-to-end limits) in non-volatile storage to allow automatic recovery (`recoverFromPowerOff`) following brownouts.
+- **Non-Blocking Asynchronous Operations:** Utilizes Pico absolute timers (`absolute_time_t`) for non-blocking status LED updates, Wi-Fi heartbeats, and MQTT event polling.
+- **Remote IoT Control (MQTT):** Bi-directional command parsing (`OPEN`, `CLOSE`, `REVERSE`) and status publishing via Wi-Fi.
 
 ---
 
-## System State Machine
+## Hardware & Sensing Architecture
 
-The door operation is governed by a deterministic Finite State Machine:
+| Component | Hardware Interface | Purpose / Description |
+| :--- | :--- | :--- |
+| **RP2040 MCU** | Raspberry Pi Pico SDK | Core microcontroller executing real-time control loops and ISR queues. |
+| **Stepper Motor** | GPIOs (`PIN_COIL_1..4`) | 4-wire stepper motor for precise position-controlled opening/closing. |
+| **Rotary Encoder** | Quadrature GPIOs (`PIN_ENCODER_A/B`) | Optical feedback tracking physical door travel relative to motor steps. |
+| **Limit Switches** | Interrupt GPIOs (`PIN_SW0`, `PIN_SW1`, `PIN_SW2`) | Metallic end-stop plates triggering hardware interrupts at full physical bounds. |
+| **EEPROM** | I2C / SPI Memory | Non-volatile storage for door state, direction, and encoder calibration data. |
+| **Wi-Fi / MQTT** | On-board Wi-Fi | Wireless interface for remote MQTT broker communications. |
+
+---
+
+## System State Machine (FSM)
+
+The top-level architecture operates on a nested Finite State Machine governing calibration and door operations:
 
 ```mermaid
 stateDiagram-v2
-    [*] --> Initializing
-    Initializing --> Closed : EEPROM Verified / System Ready
-    Closed --> Opening : Remote Command / Switch Trigger
-    Opening --> Open : Limit Switch ISR Triggered
-    Open --> Closing : Auto-Close Timer / Command
-    Closing --> Closed : Limit Switch ISR Triggered
-    Closing --> Opening : Obstacle ISR Triggered
-    Opening --> Fault : Movement Timeout Exceeded
-    Closing --> Fault : Movement Timeout Exceeded
-    Fault --> Initializing : Manual Reset Command
+    [*] --> NOT_CALIBRATED
+    
+    state Calibration_FSM {
+        NOT_CALIBRATED --> CALIBRATING : Dual Button Press (SW0 + SW2)
+        CALIBRATING --> NOT_CALIBRATED : Invalid Step Ratio / Error
+        CALIBRATING --> CALIBRATED : Calibrated & Saved to EEPROM
+    }
+
+    state Door_Operation_FSM {
+        CALIBRATED --> CLOSED : Init Default
+        CLOSED --> IN_BETWEEN : Open Cmd (SW1 / MQTT)
+        IN_BETWEEN --> OPEN : Reached Open Limit Switch
+        IN_BETWEEN --> CLOSED : Reached Close Limit Switch / Reversed
+        IN_BETWEEN --> NOT_CALIBRATED : Stuck Detected (Encoder Mismatch)
+        OPEN --> IN_BETWEEN : Close Cmd (SW1 / MQTT)
+    }
