@@ -7,9 +7,14 @@
 #include "pico/stdlib.h" // IWYU pragma: keep
 #include "gpios.h"
 
+/*
+ *
+ * =====================================================================================================================
+ * COMMON GPIO CLASS
+ * =====================================================================================================================
+ *
+ */
 
-
-/* GPIO INITIALIZATION */
 CommonGPIO::CommonGPIO(const int pin, const bool input = true, const bool pullup = true, const bool inverted = false) :
 pin(pin), input(input), is_dormant(true)
 {
@@ -46,7 +51,6 @@ pin(pin), input(input), is_dormant(true)
     }
 }
 
-/* GPIO CLEANUP */
 uint32_t CommonGPIO::pins_in_use = 0;
 
 CommonGPIO::~CommonGPIO()
@@ -62,13 +66,11 @@ CommonGPIO::~CommonGPIO()
     }
 }
 
-/* GPIO STATUS */
 CommonGPIO::operator bool() const
 {
     return !this->is_dormant;
 }
 
-/* GPIO INPUT */
 bool CommonGPIO::read() const
 {
     if (this->is_dormant)
@@ -79,7 +81,6 @@ bool CommonGPIO::read() const
     return gpio_get(this->pin);
 }
 
-/* GPIO OUTPUT */
 void CommonGPIO::write(const bool value) const
 {
     if (this->is_dormant)
@@ -90,7 +91,6 @@ void CommonGPIO::write(const bool value) const
     gpio_put(this->pin, value);
 }
 
-/* GPIO INFORMATION */
 int CommonGPIO::getPin()
 {
     if (this->is_dormant)
@@ -100,17 +100,20 @@ int CommonGPIO::getPin()
     return this->pin;
 }
 
+/*
+ *
+ * =====================================================================================================================
+ * SWITCH HUB
+ * =====================================================================================================================
+ *
+ */
 
-/* SWITCHES */
-/* SWITCH INITIALIZATION */
 Switches::Switches(const std::vector<int> &pins, bool input, bool pullup, bool inverted) {
     for (const auto &pin : pins) {
         switches.emplace_back(std::make_unique<CommonGPIO>(pin, input, pullup, inverted));
     }
 }
-/* SWITCH INTERRUPTS */
 
-/* ALLOWS TOGGLING OF MULTIPLE INTERRUPTS OF MULTIPLE GPIOS AT A TIME*/
 void Switches::setInterrupt(const std::vector<int> &swPins, const bool& enable) const
 {
     if (swPins.size() > SW_AMOUNT){

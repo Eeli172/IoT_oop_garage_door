@@ -3,14 +3,11 @@
 #include "../personal_config.h"
 #include "pico/cyw43_arch.h"
 
-
 /* ########## P U B L I C ########## */
 
-// get credentials from --> personal_config.h <-- (added into .gitignore)
 WIFI::WIFI() : ssid(WIFI_SSID), password(WIFI_PASSWORD) {}
 
 
-// Init wireless chip
 bool WIFI::init() {
     if (cyw43_arch_init_with_country(CYW43_COUNTRY_FINLAND)) {
         return false;
@@ -18,7 +15,6 @@ bool WIFI::init() {
     return true;
 }
 
-// Try to connect wifi if there's no active connection
 bool WIFI::connectWifi() {
     if (cyw43_tcpip_link_status(&cyw43_state, CYW43_ITF_STA) != CYW43_LINK_UP)
     {

@@ -5,13 +5,25 @@
 class WIFI {
 public:
 
-    // get credentials from --> personal_config.h <-- (added into .gitignore)
+    /**
+     * @brief Uses credentials from the personal_config.h file to initialize class attributes.
+     */
     WIFI();
 
-    // Init wireless chip
+    // ========================================================================
+    // WIFI HARDWARE
+    // ========================================================================
+
+    /**
+     * @brief Activates cyw43 hardware drivers and architecture.
+     * @return true if activation was successful, false otherwise.
+     */
     bool init();
 
-    // Try to connect wifi if there's no active connection
+    /**
+     * @brief Attempts connection to a Wi-Fi using the user credentials given in personal_config.h file.
+     * @return true if connecting was successful and a Wi-Fi was found, false otherwise.
+     */
     bool connectWifi();
 
 private:
