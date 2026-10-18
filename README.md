@@ -76,5 +76,5 @@ Developed by:
 - **Eeli**
 - **Sami**
 - **Max**
-Metropolia UAS
+**Metropolia UAS**
 ---
