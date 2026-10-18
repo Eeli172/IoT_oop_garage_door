@@ -67,3 +67,12 @@ stateDiagram-v2
         IN_BETWEEN --> CLOSED : Reached Close Limit Switch / Returned to Origin
         IN_BETWEEN --> NOT_CALIBRATED : Stuck Detected (Encoder Mismatch)
     }
+
+## Authors & Contributors
+
+Developed by:
+- **Eeli**
+- **Sami**
+- **Max**
+
+---
