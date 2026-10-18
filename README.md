@@ -34,3 +34,34 @@ By coupling physical limit switch interrupts with real-time feedback from a quad
 | **Wi-Fi / MQTT** | On-board Wi-Fi | Wireless interface for remote MQTT broker communications. |
 
 ---
+
+## System State Machine (FSM)
+
+The door operates on a nested Finite State Machine supporting full mid-travel manual overrides:
+
+```mermaid
+stateDiagram-v2
+    [*] --> NOT_CALIBRATED
+    
+    state Calibration_FSM {
+        NOT_CALIBRATED --> CALIBRATING : Dual Button Press (SW0 + SW2)
+        CALIBRATING --> NOT_CALIBRATED : Invalid Step Ratio / Error
+        CALIBRATING --> CALIBRATED : Calibrated & Saved to EEPROM
+    }
+
+    state Door_Operation_FSM {
+        CALIBRATED --> CLOSED : Init Default
+        CLOSED --> IN_BETWEEN : Open Cmd (SW1 / MQTT "OPEN")
+        OPEN --> IN_BETWEEN : Close Cmd (SW1 / MQTT "CLOSE")
+        
+        state IN_BETWEEN {
+            [*] --> Running
+            Running --> Stopped : SW1 Trigger / MQTT "STOP" / Manual Stop
+            Stopped --> Reversing : SW1 Trigger / MQTT "REVERSE"
+            Reversing --> Running : Direction Toggled
+        }
+
+        IN_BETWEEN --> OPEN : Reached Open Limit Switch
+        IN_BETWEEN --> CLOSED : Reached Close Limit Switch / Returned to Origin
+        IN_BETWEEN --> NOT_CALIBRATED : Stuck Detected (Encoder Mismatch)
+    }
