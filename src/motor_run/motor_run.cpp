@@ -105,20 +105,7 @@ bool Motor::runMotor(Encoder& encoder, const std::optional<std::function<bool(co
         {
             currentPositionSteps += directionAtStart ? 1 : -1;
         }
-        // Print motor position and movement status every 100 steps
-        if ((motorStepCounter % 100) == 0)
-        {
-            printf("[MOTOR STATUS] | Direction: %s | Steps: %d | Position: %d / %d | Position known: %d | Open switch: %d | Closed switch: %d | Error: %d\n",
-                directionAtStart ? "OPENING" : "CLOSING",
-                motorStepCounter,
-                currentPositionSteps,
-                motorStepsBetweenLimits,
-                positionKnown,
-                gpio_get(PIN_LMSW_MTR_OPEN),
-                gpio_get(PIN_LMSW_ENC_CLOSED),
-                errorState
-            );
-        }
+
 
         /* RESET ENCODER STEP COUNTER WHEN ENCODER MOVES */
         if (encoder.processInterrupts())
@@ -196,7 +183,6 @@ void Motor::calibrateMotor(Encoder& encoder)
     errorState = false;
 
     int totalMotorSteps = 0;
-    int closingsteps = 0;
     int totalEncoderSteps = 0;
 
 
@@ -217,7 +203,6 @@ void Motor::calibrateMotor(Encoder& encoder)
         const bool measuringLimitDistance =
             startedAtMotorLimit && direction;
 
-        const bool directionBeforeRun = direction;
 
 
         runMotor(encoder, std::nullopt);
@@ -232,25 +217,11 @@ void Motor::calibrateMotor(Encoder& encoder)
             positionKnown = true;
             reachedMtr = true;
         }
-        // Check why calibrated travel distance is not being saved
 
-        // DO NOT DELETE THIS PRINT, SOMETHING IN TIMING IS MESSED UP!!!!!!!
-        // IF DELETED THEN IT WILL SAY ([CALIBRATION ERROR] Invalid calibration values)!!!!!
-        //MAYBE IF OTHER PRINT WERE DELETED THEN IT SOULD WORK BUT NOT TESTED!!!!!!!
-
-        printf("[CALIBRATION CHECK] | Started at open: %d | Measuring travel: %d | Error: %d | Closed switch: %d | Steps: %d\n",
-            startedAtMotorLimit,
-            measuringLimitDistance,
-            errorState,
-            gpio_get(PIN_LMSW_ENC_CLOSED),
-            motorStepCounter
-        );
-        //
-        //
-        //
-
-
-
+        // Allow the limit-switch signal to settle after motor movement stops.
+        // Without this delay the GPIO may be read before the switch state is stable,
+        // causing the calibration travel distance to remain invalid.
+        sleep_ms(10);
 
         if (measuringLimitDistance &&
             !errorState &&
@@ -292,8 +263,8 @@ void Motor::calibrateMotor(Encoder& encoder)
     motorStepCounter = 0;
 
     std::cout
-        << "[CALIBRATION] Total Motor: "
-        << totalMotorSteps
+        << "[CALIBRATION] Motor steps full range of motion: "
+        << motorStepsBetweenLimits
         << " | Total Encoder: "
         << totalEncoderSteps
         << " | Ratio: "
@@ -458,12 +429,6 @@ void Motor::checkForStuck()
 
     if (stepsSinceEncoder > allowedMotorSteps)
     {
-        // std::cout
-        //     << "[STUCK CHECK] Door appears stuck"
-        //     << " | Steps since encoder: " << stepsSinceEncoder
-        //     << " | Allowed: " << allowedMotorSteps
-        //     << std::endl;
-
         errorState = true;
     }
 }
@@ -530,10 +495,4 @@ void Motor::restorePosition(int steps, bool known)
     currentPositionSteps = steps;
     positionKnown = true;
 
-    printf(
-        "[POSITION RESTORE] Position: %d / %d | Known: %d\n",
-        currentPositionSteps,
-        motorStepsBetweenLimits,
-        positionKnown
-    );
 }
