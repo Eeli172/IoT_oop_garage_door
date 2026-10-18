@@ -4,38 +4,33 @@ Embedded automatic door controller running on the **Raspberry Pi Pico (RP2040 MC
 
 ---
 
-## Table of Contents
-
-- [Overview](#overview)
-- [Key Technical Features](#key-technical-features)
-- [Hardware & Sensing Architecture](#hardware--sensing-architecture)
-- [System State Machine (FSM)](#system-state-machine-fsm)
-- [Software Architecture Highlights](#software-architecture-highlights)
-  - [1. Mid-Travel Stop & Direction Reversal](#1-mid-travel-stop--direction-reversal)
-  - [2. Dual-Layer Obstacle & Limit Detection](#2-dual-layer-obstacle--limit-detection)
-  - [3. Crash Recovery & Power-Off Persistence](#3-crash-recovery--power-off-persistence)
-- [MQTT Topics & Interface](#mqtt-topics--interface)
-- [Repository Structure](#repository-structure)
-- [Main Application Loop (main.cpp)](#main-application-loop-maincpp)
-- [Getting Started](#getting-started)
-  - [Prerequisites](#prerequisites)
-  - [Build and Flash](#build-and-flash)
-- [License](#license)
-
----
-
 ## Overview
 
-Automated physical barriers demand absolute safety, real-time responsiveness, and seamless fault handling. This firmware controls a 4-coil stepper motor to drive a door mechanism between physical bounds while constantly monitoring movement metrics and user controls.
+Automated physical barriers demand absolute safety, real-time responsiveness, and seamless fault handling. This firmware controls a 4-coil stepper motor to drive a door mechanism between physical bounds while constantly monitoring movement metrics.
 
-By coupling physical limit switch interrupts with real-time feedback from a quadrature **Rotary Encoder**, the system mathematically verifies motor execution step-by-step. In addition to physical end-stop protection, the door allows mid-travel dynamic manual control: users can interrupt movement mid-way via physical switches or MQTT commands (`STOP`), and dynamically toggle movement direction (`REVERSE`).
+By coupling physical limit switch interrupts with real-time feedback from a quadrature **Rotary Encoder**, the system mathematically verifies motor execution step-by-step. If an obstacle prevents physical movement, the system instantly detects step desynchronization, triggers a safety fault, and notifies the network via MQTT.
 
 ---
 
 ## Key Technical Features
 
-- **Dynamic Mid-Travel Control (`STOP` & `REVERSE`):** Manual user override via switch (`SW1`) or MQTT command (`STOP`) halts movement immediately. Subsequent triggers (`REVERSE`) reverse the drive direction mid-travel.
 - **Dual-Layer Position & Obstacle Tracking:** Combines hardware interrupts from physical limit switches with step-to-encoder pulse validation to detect stuck doors/obstructions instantly.
 - **Deterministic Finite State Machine (FSM):** Fully isolated calibration phases (`NOT_CALIBRATED`, `CALIBRATING`, `CALIBRATED`) and door operational states (`CLOSED`, `IN_BETWEEN`, `OPEN`).
 - **EEPROM Fault Recovery:** Stores critical variables (state, direction, steps-per-encoder ratio, end-to-end limits) in non-volatile storage to allow automatic recovery (`recoverFromPowerOff`) following brownouts.
-- **Non-Blocking Asynchronous Operations:** Utilizes Pico
+- **Non-Blocking Asynchronous Operations:** Utilizes Pico absolute timers (`absolute_time_t`) for non-blocking status LED updates, Wi-Fi heartbeats, and MQTT event polling.
+- **Remote IoT Control (MQTT):** Bi-directional command parsing (`OPEN`, `CLOSE`, `REVERSE`) and status publishing via Wi-Fi.
+
+---
+
+## Hardware & Sensing Architecture
+
+| Component | Hardware Interface | Purpose / Description |
+| :--- | :--- | :--- |
+| **RP2040 MCU** | Raspberry Pi Pico SDK | Core microcontroller executing real-time control loops and ISR queues. |
+| **Stepper Motor** | GPIOs (`PIN_COIL_1..4`) | 4-wire stepper motor for precise position-controlled opening/closing. |
+| **Rotary Encoder** | Quadrature GPIOs (`PIN_ENCODER_A/B`) | Optical feedback tracking physical door travel relative to motor steps. |
+| **Limit Switches** | Interrupt GPIOs (`PIN_SW0`, `PIN_SW1`, `PIN_SW2`) | Metallic end-stop plates triggering hardware interrupts at full physical bounds. |
+| **EEPROM** | I2C / SPI Memory | Non-volatile storage for door state, direction, and encoder calibration data. |
+| **Wi-Fi / MQTT** | On-board Wi-Fi | Wireless interface for remote MQTT broker communications. |
+
+---
